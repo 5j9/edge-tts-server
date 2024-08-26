@@ -10,13 +10,16 @@ function getText() {
 
 
 async function tts() {
-  response = await fetch(
+  var response = await fetch(
     'http://127.0.0.1:1775/',
     { 'method': 'post', 'body': getText() }
   )
-  blob = await response.blob()
+  var blob = await response.blob()
   var url = URL.createObjectURL(blob);
-  new Audio(url).play();
+  var audio = new Audio(url);
+  // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
+  audio.preload = 'none';
+  audio.play();
 }
 
 GM_registerMenuCommand('tts', tts)
