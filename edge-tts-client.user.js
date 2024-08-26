@@ -7,18 +7,15 @@ function getText() {
   return document.querySelector('article,body').innerText;
 }
 
-
-
 async function tts() {
-  var response = await fetch(
+  await fetch(
     'http://127.0.0.1:1775/',
     { 'method': 'post', 'body': document.title + '\n' + getText() }
-  )
-  var blob = await response.blob()
-  var url = URL.createObjectURL(blob);
-  var audio = new Audio(url);
+  );
+  var audio = new Audio();
   // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
   audio.preload = 'none';
+  audio.src = 'http://127.0.0.1:1775/';
   audio.play();
 }
 

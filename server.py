@@ -1,4 +1,5 @@
 import asyncio
+from typing import AsyncGenerator, Any
 
 from aiohttp.web import (
     Application,
@@ -6,6 +7,8 @@ from aiohttp.web import (
     StreamResponse,
     post,
     run_app,
+    get,
+    Response,
 )
 from edge_tts import Communicate, VoicesManager
 
@@ -18,11 +21,10 @@ async def set_voice_name():
     voice_name = voices.find(Gender="Male", Language="fa")[0]["Name"]
 
 
-async def tts(request: Request) -> StreamResponse:
-    title, _, text = (await request.text()).partition("\n")
-    print(f"serving {title}")
-    communicate = Communicate(text, voice_name)
+stream: AsyncGenerator[dict[str, Any], None]
 
+
+async def src(request: Request) -> StreamResponse:
     response = StreamResponse(
         status=200,
         reason="OK",
@@ -33,21 +35,27 @@ async def tts(request: Request) -> StreamResponse:
     )
     await response.prepare(request)
 
-    async for message in communicate.stream():
+    async for message in stream:
         match message["type"]:
             case "audio":
                 await response.write(message["data"])
             case _:
                 # print(message)
                 pass
-
-    await response.write_eof()
-    print(f"done serving {title}")
+    print("done")
     return response
 
 
+async def tts(request: Request) -> Response:
+    global stream
+    title, _, text = (await request.text()).partition("\n")
+    print(f"serving {title}")
+    stream = Communicate(text, voice_name).stream()
+    return Response(headers={"Access-Control-Allow-Origin": "*"})
+
+
 app = Application()
-app.add_routes([post("/", tts)])
+app.add_routes([post("/", tts), get("/", src)])
 
 loop = asyncio.new_event_loop()
 loop.create_task(set_voice_name())
