@@ -19,7 +19,8 @@ async def set_voice_name():
 
 
 async def tts(request: Request) -> StreamResponse:
-    text = await request.text()
+    title, _, text = (await request.text()).partition("\n")
+    print(f"serving {title}")
     communicate = Communicate(text, voice_name)
 
     response = StreamResponse(
@@ -41,6 +42,7 @@ async def tts(request: Request) -> StreamResponse:
                 pass
 
     await response.write_eof()
+    print(f"done serving {title}")
     return response
 
 
