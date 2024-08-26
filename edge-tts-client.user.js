@@ -10,7 +10,10 @@ function getText() {
 
 
 async function tts() {
-  response = await fetch('http://127.0.0.1:1775/', {'method': 'post', 'body': getText()})
+  response = await fetch(
+    'http://127.0.0.1:1775/',
+    { 'method': 'post', 'body': getText() }
+  )
   blob = await response.blob()
   var url = URL.createObjectURL(blob);
   new Audio(url).play();
