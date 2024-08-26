@@ -37,7 +37,8 @@ async def tts(request: Request) -> StreamResponse:
             case "audio":
                 await response.write(message["data"])
             case _:
-                print(message)
+                # print(message)
+                pass
 
     await response.write_eof()
     return response

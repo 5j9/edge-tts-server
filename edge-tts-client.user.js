@@ -1,11 +1,10 @@
 // ==UserScript==
 // @name        edge-tts-client
 // @namespace   https://github.com/5j9/edge-tts-server
-// @match       *
 // @grant       GM_registerMenuCommand
 // ==/UserScript==
 function getText() {
-  return document.querySelector('article').innerText;
+  return document.querySelector('article,body').innerText;
 }
 
 
