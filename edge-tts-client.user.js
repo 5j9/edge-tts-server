@@ -5,6 +5,8 @@
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
 function getText() {
+  var sel = window.getSelection().toString();
+  if (sel) { return sel; }
   return document.querySelector('article,body').innerText;
 }
 
