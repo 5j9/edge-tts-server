@@ -12,11 +12,10 @@ function getText() {
 }
 
 async function play() {
-
   if (!audio.paused) {
     audio.pause();
     return;
-  } else if (audio.currentTime != 0) {
+  } else if (audio.currentTime != 0 && !audio.ended) {
     audio.play();
     return;
   }
