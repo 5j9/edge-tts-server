@@ -1,5 +1,6 @@
 import asyncio
 from typing import AsyncGenerator, Any
+from base64 import b64encode
 
 from aiohttp.web import (
     Application,
@@ -38,7 +39,7 @@ async def src(request: Request) -> StreamResponse:
     async for message in stream:
         match message["type"]:
             case "audio":
-                await response.write(message["data"])
+                await response.write(b64encode(message["data"]))
             case _:
                 # print(message)
                 pass
