@@ -5,6 +5,7 @@
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
 var audio = new Audio();
+// https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
 audio.preload = 'none';
 
 document.addEventListener('securitypolicyviolation', () => {
@@ -48,7 +49,6 @@ async function play() {
     'onload': () => { resolve(); }
   }));
 
-  // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
   audio.src = 'http://127.0.0.1:1775/';
   audio.play().catch((e) => {
     if (e != 'AbortError: The play() request was interrupted by a call to pause().') {
