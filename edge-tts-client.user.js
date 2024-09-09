@@ -7,10 +7,10 @@
 var audio = new Audio();
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
 audio.preload = 'none';
-var textSent = false;
 
-document.addEventListener('securitypolicyviolation', () => {
-  if (!textSent) return;
+function onSPV() {
+  document.removeEventListener('securitypolicyviolation', onSPV);
+
   console.log('changing loader');
 
   function onLoad(xhr) {
@@ -19,14 +19,13 @@ document.addEventListener('securitypolicyviolation', () => {
     audio.play();
   }
 
-  textSent = false;
   GM_xmlhttpRequest({
     'url': 'http://127.0.0.1:1775/',
     'method': 'get',
     'responseType': 'blob',
     'onload': onLoad
-  })
-});
+  });
+}
 
 function getText() {
   var sel = window.getSelection().toString();
@@ -52,7 +51,7 @@ async function play() {
     'onload': () => { resolve(); }
   }));
 
-  textSent = true;
+  document.addEventListener('securitypolicyviolation', onSPV);
 
   audio.src = 'http://127.0.0.1:1775/';
   audio.play().catch((e) => {
