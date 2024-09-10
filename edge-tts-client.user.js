@@ -6,7 +6,7 @@
 // ==/UserScript==
 var audio = new Audio();
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
-audio.preload = 'none';
+//audio.preload = 'none';
 
 function onSPV() {
   document.removeEventListener('securitypolicyviolation', onSPV);
