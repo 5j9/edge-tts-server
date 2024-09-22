@@ -6,7 +6,7 @@
 // ==/UserScript==
 var audio = new Audio();
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
-//audio.preload = 'none';
+// audio.preload = 'none';
 
 function onSPV() {
   document.removeEventListener('securitypolicyviolation', onSPV);
@@ -33,6 +33,7 @@ function getText() {
   return document.querySelector('article,body').innerText;
 }
 
+var text, prevtext;
 
 async function play() {
   if (!audio.paused) {
@@ -43,13 +44,19 @@ async function play() {
     return;
   }
 
+  text = getText();
+  if (audio.ended && prevtext == text) {
+    audio.play();
+    return;
+  }
 
   await new Promise((resolve) => GM_xmlhttpRequest({
     'url': 'http://127.0.0.1:1775/',
     'method': 'post',
-    'data': document.title + '\n' + getText(),
+    'data': document.title + '\n' + text,
     'onload': () => { resolve(); }
   }));
+  prevtext = text;
 
   document.addEventListener('securitypolicyviolation', onSPV);
 
