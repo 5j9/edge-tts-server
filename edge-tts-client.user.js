@@ -4,6 +4,24 @@
 // @grant       GM_registerMenuCommand
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
+try {  // in greasemonkey script
+  GM_registerMenuCommand('play', play);
+  GM_registerMenuCommand('stop', stop);
+} catch (undefinedReferenceError) {  // in reader.html
+  function GM_xmlhttpRequest(requestData) {
+    var xhr = new XMLHttpRequest()
+    if (requestData['onload']) {
+      xhr.addEventListener("load", requestData['onload']);
+    }
+    if (requestData['responseType']) {
+      xhr.responseType = requestData['responseType'];
+    }
+
+    xhr.open(requestData['method'], requestData['url']);
+    xhr.send(requestData['data'] || null);
+  }
+}
+
 var audio = new Audio();
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload#none
 // audio.preload = 'none';
@@ -72,7 +90,3 @@ function stop() {
   audio.pause();
   audio.currentTime = 0;
 }
-
-
-GM_registerMenuCommand('play', play);
-GM_registerMenuCommand('stop', stop);

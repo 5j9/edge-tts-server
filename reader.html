@@ -1,0 +1,27 @@
+<html lang="fa" dir=rtl>
+
+<div class="editable" contenteditable="true" id="editable_field" style="white-space: pre-wrap;">
+
+</div>
+<button id='clear'>Clear</button>
+
+<script src="./edge-tts-client.user.js"></script>
+<script>
+	var editableField = document.getElementById('editable_field');
+	document.getElementById('clear').addEventListener('click', () => {
+		editableField.textContent = '';
+	});
+
+	document.addEventListener('paste', (e) => {
+		e.preventDefault();
+		// var pasteType = e.clipboardData.types[0];
+		var paste = e.clipboardData.getData('text/html');
+		if (!paste) {
+			paste = e.clipboardData.getData('text');
+		}
+		// remove 4-byte unicode characters
+		paste = paste.replace(/[\u{10000}-\u{10FFFF}]/gu, '');
+		editableField.innerHTML = paste;
+		play();
+	});
+</script>
