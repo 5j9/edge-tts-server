@@ -7,8 +7,9 @@
 try {  // in greasemonkey script
 	GM_registerMenuCommand('play', play);
 	GM_registerMenuCommand('stop', stop);
+	var request = GM_xmlhttpRequest;
 } catch (undefinedReferenceError) {  // in reader.html
-	function GM_xmlhttpRequest(requestData) {
+	function request(requestData) {
 		var xhr = new XMLHttpRequest()
 		if (requestData['onload']) {
 			xhr.addEventListener("load", requestData['onload']);
@@ -37,7 +38,7 @@ function onSPV() {
 		audio.play();
 	}
 
-	GM_xmlhttpRequest({
+	request({
 		'url': 'http://127.0.0.1:1775/',
 		'method': 'get',
 		'responseType': 'blob',
@@ -68,7 +69,7 @@ async function play() {
 		return;
 	}
 
-	await new Promise((resolve) => GM_xmlhttpRequest({
+	await new Promise((resolve) => request({
 		'url': 'http://127.0.0.1:1775/',
 		'method': 'post',
 		'data': document.title + '\n' + text,
