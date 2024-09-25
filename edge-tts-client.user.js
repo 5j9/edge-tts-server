@@ -55,16 +55,12 @@ function getText() {
 var text, prevtext;
 
 async function play() {
-	if (!audio.paused) {
-		audio.pause();
-		return;
-	} else if (audio.currentTime != 0 && !audio.ended) {
-		audio.play();
-		return;
-	}
-
 	text = getText();
-	if (audio.ended && prevtext == text) {
+	if (prevtext == text) {
+		if (!audio.paused) {
+			audio.pause();
+			return;
+		}
 		audio.play();
 		return;
 	}
