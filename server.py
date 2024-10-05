@@ -1,15 +1,16 @@
-from re import compile as rc
 import asyncio
-from typing import AsyncGenerator, Any
+from collections.abc import AsyncGenerator
+from re import compile as rc
+from typing import Any
 
 from aiohttp.web import (
     Application,
     Request,
+    Response,
     StreamResponse,
+    get,
     post,
     run_app,
-    get,
-    Response,
 )
 from edge_tts import Communicate, VoicesManager
 
