@@ -5,7 +5,7 @@
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
 try {  // in greasemonkey script
-	GM_registerMenuCommand('play', play);
+	GM_registerMenuCommand('play', () => { setupSelectionAutoPlay(); play(); });
 	GM_registerMenuCommand('stop', stop);
 	var request = GM_xmlhttpRequest;
 } catch (undefinedReferenceError) {  // in reader.html
@@ -50,6 +50,21 @@ function getText() {
 	var sel = window.getSelection().toString();
 	if (sel) { return sel; }
 	return document.querySelector('article,body').innerText;
+}
+
+var selectionAutoPlayTimeout;
+
+function setupSelectionAutoPlay() {
+	document.addEventListener('selectionchange', () => {
+		if (selectionAutoPlayTimeout) {
+			clearTimeout(selectionAutoPlayTimeout);
+		}
+		selectionAutoPlayTimeout = setTimeout(() => {
+			if (getSelection().type == 'Caret') return;
+			// console.log('play');
+			play();
+		}, 500);
+	});
 }
 
 var text, prevtext;
