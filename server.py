@@ -21,7 +21,7 @@ fa_voice: str = (
     'Microsoft Server Speech Text to Speech Voice (fa-IR, FaridNeural)'
 )
 en_voice: str = (
-    'Microsoft Server Speech Text to Speech Voice (en-US, AvaNeural)'
+    'Microsoft Server Speech Text to Speech Voice (en-US, AndrewNeural)'
 )
 
 
