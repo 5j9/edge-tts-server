@@ -55,7 +55,7 @@ function getText() {
 var selectionAutoPlayTimeout;
 
 function setupSelectionAutoPlay() {
-	document.addEventListener('selectionchange', () => {
+	document.addEventListener('mouseup', () => {
 		if (selectionAutoPlayTimeout) {
 			clearTimeout(selectionAutoPlayTimeout);
 		}
