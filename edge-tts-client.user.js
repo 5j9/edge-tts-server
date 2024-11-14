@@ -4,11 +4,21 @@
 // @grant       GM_registerMenuCommand
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
+// @ts-check
 try {  // in greasemonkey script
-	GM_registerMenuCommand('play', () => { setupSelectionAutoPlay(); play(); });
+	// @ts-ignore
+	GM_registerMenuCommand('play', () => {
+		setupSelectionAutoPlay();
+		play();
+		// @ts-ignore
+		GM_registerMenuCommand('play', play);
+	});
+	// @ts-ignore
 	GM_registerMenuCommand('stop', stop);
+	// @ts-ignore
 	var request = GM_xmlhttpRequest;
 } catch (undefinedReferenceError) {  // in reader.html
+	// @ts-ignore
 	function request(requestData) {
 		var xhr = new XMLHttpRequest()
 		if (requestData['onload']) {
@@ -46,31 +56,48 @@ function onSPV() {
 	});
 }
 
-function getText() {
-	var sel = window.getSelection().toString();
-	if (sel) { return sel; }
-	return document.querySelector('article,body').innerText;
+
+function selectionText() {
+	var sel = getSelection();
+	if (sel !== null) {
+		text = sel.toString().trim();
+		return text;
+	}
+}
+
+/**
+ * 
+ * @returns String
+ */
+function selectionOrBody() {
+	// @ts-ignore
+	return selectionText() || document.querySelector('article,body').innerText;
 }
 
 var selectionAutoPlayTimeout;
 
 function setupSelectionAutoPlay() {
 	document.addEventListener('mouseup', () => {
-		if (selectionAutoPlayTimeout) {
+		if (selectionAutoPlayTimeout !== undefined) {
 			clearTimeout(selectionAutoPlayTimeout);
 		}
-		selectionAutoPlayTimeout = setTimeout(() => {
-			if (getSelection().type == 'Caret') return;
-			// console.log('play');
-			play();
-		}, 500);
+		var text = selectionText();
+		if (!text || text == prevtext) return;
+		play(text);
 	});
 }
 
 var text, prevtext;
 
-async function play() {
-	text = getText();
+/**
+ * 
+ * @param {String | null} text 
+ * @returns
+ */
+async function play(text = null) {
+	if (text === null) {
+		text = selectionOrBody();
+	}
 	if (prevtext == text) {
 		if (!audio.paused) {
 			audio.pause();
@@ -84,7 +111,7 @@ async function play() {
 		'url': 'http://127.0.0.1:1775/',
 		'method': 'post',
 		'data': document.title + '\n' + text,
-		'onload': () => { resolve(); }
+		'onload': () => { resolve(null); }
 	}));
 	prevtext = text;
 
