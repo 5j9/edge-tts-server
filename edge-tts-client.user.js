@@ -5,13 +5,14 @@
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
 // @ts-check
+var autoplaySetup = false;
 try {  // in greasemonkey script
 	// @ts-ignore
 	GM_registerMenuCommand('play', () => {
-		setupSelectionAutoPlay();
+		if (!autoplaySetup) {
+			setupSelectionAutoPlay();
+		}
 		play();
-		// @ts-ignore
-		GM_registerMenuCommand('play', play);
 	});
 	// @ts-ignore
 	GM_registerMenuCommand('stop', stop);
@@ -77,6 +78,7 @@ function selectionOrBody() {
 var selectionAutoPlayTimeout;
 
 function setupSelectionAutoPlay() {
+	autoplaySetup = true;
 	document.addEventListener('mouseup', () => {
 		if (selectionAutoPlayTimeout !== undefined) {
 			clearTimeout(selectionAutoPlayTimeout);
