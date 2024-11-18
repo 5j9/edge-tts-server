@@ -10,7 +10,8 @@ try {  // in greasemonkey script
 	// @ts-ignore
 	GM_registerMenuCommand('play', () => {
 		if (!autoplaySetup) {
-			setupSelectionAutoPlay();
+			document.addEventListener('mouseup', mouseupPlay);
+			autoplaySetup = true;
 		}
 		play();
 	});
@@ -77,16 +78,13 @@ function selectionOrBody() {
 
 var selectionAutoPlayTimeout;
 
-function setupSelectionAutoPlay() {
-	autoplaySetup = true;
-	document.addEventListener('mouseup', () => {
-		if (selectionAutoPlayTimeout !== undefined) {
-			clearTimeout(selectionAutoPlayTimeout);
-		}
-		var text = selectionText();
-		if (!text || text == prevtext) return;
-		play(text);
-	});
+function mouseupPlay() {
+	if (selectionAutoPlayTimeout !== undefined) {
+		clearTimeout(selectionAutoPlayTimeout);
+	}
+	var text = selectionText();
+	if (!text || text == prevtext) return;
+	play(text);
 }
 
 var text, prevtext;
@@ -128,6 +126,10 @@ async function play(text = null) {
 }
 
 function stop() {
+	if (autoplaySetup) {
+		document.removeEventListener('mouseup', mouseupPlay);
+		autoplaySetup = false;
+	}
 	audio.pause();
 	audio.currentTime = 0;
 }
