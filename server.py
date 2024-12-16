@@ -7,12 +7,14 @@ from aiohttp.web import (
     Application,
     Request,
     Response,
+    RouteTableDef,
     StreamResponse,
-    get,
-    post,
     run_app,
 )
 from edge_tts import Communicate, VoicesManager
+
+routes = RouteTableDef()
+
 
 is_persian = rc('[\u0600-\u06ff]').search
 
@@ -35,6 +37,7 @@ async def set_voice_names():
 stream: AsyncGenerator[dict[str, Any], None]
 
 
+@routes.get('/')
 async def src(request: Request) -> StreamResponse:
     response = StreamResponse(
         status=200,
@@ -57,6 +60,7 @@ async def src(request: Request) -> StreamResponse:
     return response
 
 
+@routes.post('/')
 async def tts(request: Request) -> Response:
     global stream
     title, _, text = (await request.text()).partition('\n')
@@ -68,7 +72,7 @@ async def tts(request: Request) -> Response:
 
 
 app = Application()
-app.add_routes([post('/', tts), get('/', src)])
+app.add_routes(routes)
 
 loop = asyncio.new_event_loop()
 # loop.create_task(set_voice_names())
