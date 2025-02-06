@@ -24,12 +24,28 @@ async function play() {
 }
 
 
+var activeFront = false;
 /** @type {HTMLElement} */
 // @ts-ignore
-var toggleElem = document.getElementById('toggle');
-async function toggle(e) {
-	var r = await fetch('http://127.0.0.1:3775/toggle');
-	toggleElem.textContent = await r.text();
+var frontToggle = document.getElementById('front-toggle');
+async function toggleFront() {
+	activeFront = !activeFront;
+	if (activeFront) {
+		frontToggle.textContent = 'Front-end: On';
+		// if paused in the middle, not finished playing
+		if (!audio.ended) { audio.play() }
+	} else {
+		frontToggle.textContent = 'Front-end: Off';
+		audio.pause();
+	}
+}
+
+/** @type {HTMLElement} */
+// @ts-ignore
+var backToggle = document.getElementById('back-toggle');
+async function toggleBack() {
+	var r = await fetch('http://127.0.0.1:3775/back-toggle');
+	backToggle.textContent = await r.text();
 }
 
 
@@ -54,9 +70,22 @@ function startWs() {
 
 	ws.onmessage = (e) => {
 		var msg = e.data;
+		if (msg.length < 20) {
+			if (msg.length < 2) {
+				toggleFront();
+				return;
+			}
+			return;
+		}
+
+		if (!activeFront) {
+			return;
+		}
+
 		editableField.textContent = msg;
 		play();
 	}
+
 }
 
 

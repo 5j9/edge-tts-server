@@ -40,16 +40,18 @@ async def set_voice_names():
 all_origins = {'Access-Control-Allow-Origin': '*'}
 
 
-monitoring = Event()
+# This event will be cleared when back-end gets deactivated.
+back = Event()
+back.set()
 
 
-@routes.get('/toggle')
+@routes.get('/back-toggle')
 async def _(_: Request) -> Response:
-    if monitoring.is_set():
-        monitoring.clear()
-        return Response(text='Clipboard Monitoring: Off', headers=all_origins)
-    monitoring.set()
-    return Response(text='Clipboard Monitoring: On', headers=all_origins)
+    if back.is_set():
+        back.clear()
+        return Response(text='Back-end: On', headers=all_origins)
+    back.set()
+    return Response(text='Back-end: Off', headers=all_origins)
 
 
 monitor_clipboard_args = [
@@ -73,9 +75,9 @@ async def websocket_handler(request):
     await ws.prepare(request)
     try:
         while True:
-            await monitoring.wait()
-            cb_text = await clipboard_text()
-            if monitoring.is_set() is False:
+            await back.wait()
+            cb_text = (await clipboard_text()).strip()
+            if back.is_set() is False:
                 continue
             info('new clipboard text recieved')
             await ws.send_str(cb_text)
