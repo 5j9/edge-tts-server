@@ -1,7 +1,9 @@
-import asyncio
-from collections.abc import AsyncGenerator
+import sys
+from asyncio import Event, create_subprocess_exec, new_event_loop
+from logging import error, exception, info
+from pathlib import Path
 from re import compile as rc
-from typing import Any
+from subprocess import PIPE
 
 from aiohttp.web import (
     Application,
@@ -9,6 +11,7 @@ from aiohttp.web import (
     Response,
     RouteTableDef,
     StreamResponse,
+    WebSocketResponse,
     run_app,
 )
 from edge_tts import Communicate, VoicesManager
@@ -34,46 +37,84 @@ async def set_voice_names():
     en_voice = voice_manager.find(ShortName='en-US-AvaNeural')[0]['Name']
 
 
-stream: AsyncGenerator[dict[str, Any], None]
+all_origins = {'Access-Control-Allow-Origin': '*'}
 
 
-@routes.get('/')
-async def src(request: Request) -> StreamResponse:
-    response = StreamResponse(
-        status=200,
-        reason='OK',
-        headers={
-            'Content-Type': 'audio/mpeg',
-            'Access-Control-Allow-Origin': '*',
-        },
+monitoring = Event()
+
+
+@routes.get('/toggle')
+async def _(_: Request) -> Response:
+    if monitoring.is_set():
+        monitoring.clear()
+        return Response(text='Clipboard Monitoring: Off', headers=all_origins)
+    monitoring.set()
+    return Response(text='Clipboard Monitoring: On', headers=all_origins)
+
+
+monitor_clipboard_args = [
+    sys.executable,
+    str(Path(__file__).parent / 'monitor_clipboard.py'),
+]
+
+
+async def clipboard_text() -> str:
+    process = await create_subprocess_exec(
+        *monitor_clipboard_args, stdout=PIPE
     )
+    return (await process.communicate())[0].decode()
+
+
+@routes.get('/ws')
+async def websocket_handler(request):
+    global cb_text
+    info('new socket connection')
+    ws = WebSocketResponse()
+    await ws.prepare(request)
+    try:
+        while True:
+            await monitoring.wait()
+            cb_text = await clipboard_text()
+            info('new clipboard text recieved')
+            await ws.send_str(cb_text)
+    except Exception as e:
+        exception(e)
+        return ws
+
+
+audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
+
+
+@routes.get('/audio')
+async def _(request: Request) -> StreamResponse:
+    info('serving audio started')
+    response = StreamResponse(status=200, reason='OK', headers=audio_headers)
     await response.prepare(request)
 
-    async for message in stream:
-        match message['type']:
-            case 'audio':
-                await response.write(message['data'])
-            case _:
-                # print(message)
-                pass
-    print('done')
+    try:
+        async for message in Communicate(
+            cb_text, fa_voice if is_persian(cb_text) else en_voice
+        ).stream():
+            match message['type']:
+                case 'audio':
+                    await response.write(message['data'])
+                case _:
+                    # debug(message)
+                    pass
+    except Exception as e:
+        error(f'{e!r}')
+    else:
+        info('serving audio finished')
     return response
 
 
-@routes.post('/')
-async def tts(request: Request) -> Response:
-    global stream
-    title, _, text = (await request.text()).partition('\n')
-    print(f'serving {title}')
-    stream = Communicate(
-        text, fa_voice if is_persian(text) else en_voice
-    ).stream()
-    return Response(headers={'Access-Control-Allow-Origin': '*'})
+if __name__ == '__main__':
+    app = Application()
+    app.add_routes(routes)
 
-
-app = Application()
-app.add_routes(routes)
-
-loop = asyncio.new_event_loop()
-# loop.create_task(set_voice_names())
-run_app(app, host='127.0.0.1', port=1775, loop=loop)
+    loop = new_event_loop()
+    # loop.create_task(set_voice_names())
+    try:
+        run_app(app, host='127.0.0.1', port=3775, loop=loop)
+    except KeyboardInterrupt:
+        pass
