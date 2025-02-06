@@ -19,7 +19,8 @@
 		if (!paste) {
 			paste = e.clipboardData.getData('text');
 		}
-		// remove 4-byte unicode characters
+		// Remove 4-byte unicode characters. Sometimes the tts
+		// engine gets stuck on them.
 		paste = paste.replace(/[\u{10000}-\u{10FFFF}]/gu, '');
 		editableField.innerHTML = paste;
 		play();
