@@ -26,10 +26,10 @@ async function play() {
 
 /** @type {HTMLElement} */
 // @ts-ignore
-var targetElm = document.getElementById('toggle');
+var toggleElem = document.getElementById('toggle');
 async function toggle(e) {
 	var r = await fetch('http://127.0.0.1:3775/toggle');
-	targetElm.textContent = await r.text();
+	toggleElem.textContent = await r.text();
 }
 
 
@@ -53,8 +53,8 @@ function startWs() {
 	};
 
 	ws.onmessage = (e) => {
-		console.log('new msg', e)
-		editableField.textContent = e.data;
+		var msg = e.data;
+		editableField.textContent = msg;
 		play();
 	}
 }
