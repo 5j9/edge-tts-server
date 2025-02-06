@@ -75,6 +75,8 @@ async def websocket_handler(request):
         while True:
             await monitoring.wait()
             cb_text = await clipboard_text()
+            if monitoring.is_set() is False:
+                continue
             info('new clipboard text recieved')
             await ws.send_str(cb_text)
     except Exception as e:
