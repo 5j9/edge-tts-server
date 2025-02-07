@@ -1,9 +1,9 @@
 import sys
-from asyncio import Event, create_subprocess_exec, new_event_loop
+from asyncio import Event, new_event_loop, to_thread
 from logging import error, exception, info
+from multiprocessing import Pipe, Process
 from pathlib import Path
 from re import compile as rc
-from subprocess import PIPE
 
 from aiohttp.web import (
     Application,
@@ -15,6 +15,8 @@ from aiohttp.web import (
     run_app,
 )
 from edge_tts import Communicate, VoicesManager
+
+from monitor_clipboard import run_qt_app
 
 routes = RouteTableDef()
 
@@ -60,13 +62,6 @@ monitor_clipboard_args = [
 ]
 
 
-async def clipboard_text() -> str:
-    process = await create_subprocess_exec(
-        *monitor_clipboard_args, stdout=PIPE
-    )
-    return (await process.communicate())[0].decode()
-
-
 @routes.get('/ws')
 async def websocket_handler(request):
     global cb_text
@@ -76,7 +71,7 @@ async def websocket_handler(request):
     try:
         while True:
             await back.wait()
-            cb_text = (await clipboard_text()).strip()
+            cb_text = (await to_thread(cb_slave.recv)).strip()
             if back.is_set() is False:
                 continue
             info('new clipboard text recieved')
@@ -118,6 +113,10 @@ if __name__ == '__main__':
 
     loop = new_event_loop()
     # loop.create_task(set_voice_names())
+
+    cb_master, cb_slave = Pipe()
+    qt_process = Process(target=run_qt_app, args=(cb_master,))
+    qt_process.start()
     try:
         run_app(app, host='127.0.0.1', port=3775, loop=loop)
     except KeyboardInterrupt:
