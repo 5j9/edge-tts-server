@@ -52,21 +52,20 @@ async function toggleBack() {
 var ws;
 function startWs() {
 	if (ws) { // Check if a WebSocket already exists
-		ws.close(); // Close any existing connection
-		ws.onopen = null; //Remove previous event listeners to avoid unexpected behavior
-		ws.onclose = null;
-		ws.onmessage = null;
+		ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null;
+		ws.close();
 	}
 	console.log('new websocket')
 	ws = new WebSocket('http://127.0.0.1:3775/ws');
 
 	ws.onopen = () => { ws.send('hello') }
 
-	ws.onclose = (e) => {
+	function onCloseOrError(e) {
 		var dt = new Date();
-		editableField.textContent = dt + ': WebSocket was closed; will retry in 2 seconds ' + e.reason;
+		editableField.textContent = `${dt}: WebSocket closed or error; will retry in 2 seconds ${e}`;
 		setTimeout(startWs, 2000);
-	};
+	}
+	ws.onerror = ws.onclose = onCloseOrError;
 
 	ws.onmessage = (e) => {
 		var msg = e.data;
