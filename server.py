@@ -78,6 +78,7 @@ async def websocket_handler(request):
             await ws.send_str(cb_text)
     except Exception as e:
         exception(e)
+        await ws.close()
         return ws
 
 
