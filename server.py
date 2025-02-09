@@ -4,7 +4,6 @@ from logging import error, exception, info
 from multiprocessing import Pipe, Process
 from pathlib import Path
 from re import compile as rc
-from threading import Lock
 
 from aiohttp.web import (
     Application,
@@ -62,8 +61,6 @@ monitor_clipboard_args = [
     str(Path(__file__).parent / 'monitor_clipboard.py'),
 ]
 
-cb_slave_lock = Lock()
-
 
 @routes.get('/ws')
 async def websocket_handler(request):
@@ -74,8 +71,7 @@ async def websocket_handler(request):
     try:
         while True:
             await back.wait()
-            with cb_slave_lock:
-                cb_text = (await to_thread(cb_slave.recv)).strip()
+            cb_text = (await to_thread(cb_slave.recv)).strip()
             if back.is_set() is False:
                 continue
             info('new clipboard text recieved')
