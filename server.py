@@ -51,9 +51,9 @@ back.set()
 async def _(_: Request) -> Response:
     if back.is_set():
         back.clear()
-        return Response(text='Back-end: On', headers=all_origins)
+        return Response(text='Back-end: Off', headers=all_origins)
     back.set()
-    return Response(text='Back-end: Off', headers=all_origins)
+    return Response(text='Back-end: On', headers=all_origins)
 
 
 monitor_clipboard_args = [
