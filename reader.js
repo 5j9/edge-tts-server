@@ -69,7 +69,7 @@ function startWs() {
 
 	ws.onmessage = (e) => {
 		var msg = e.data;
-		if (msg.length < 30) {
+		if (msg.length < 100) {
 			if (msg.length < 3) {
 				toggleFront();
 				return;
