@@ -6,6 +6,6 @@
 4. Copy some text to your clipboard.
 5. The reader will start reading the text!
 
-The reader will ignore texts shorter than 100 characters and will automatically toggle the front-end state to off if the length is less than 3 characters. This can be used to switch the state without going to the tab.
+The reader will ignore texts shorter than 30 characters and will automatically toggle the front-end state to off if the length is less than 3 characters. This can be used to switch the state without going to the tab.
 
 **Todo**: Add speed control. For now, I suggest using *Global Speed* ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/global-speed/), [Chrome](https://chromewebstore.google.com/detail/global-speed/jpbjcnkcffbooppibceonlgknpkniiff), [Edge](https://microsoftedge.microsoft.com/addons/detail/global-speed/mjhlabbcmjflkpjknnicihkfnmbdfced)) for adjusting the reading speed.
