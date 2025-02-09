@@ -56,7 +56,7 @@ function startWs() {
 		ws.close();
 	}
 	console.log('new websocket')
-	ws = new WebSocket('http://127.0.0.1:3775/ws');
+	ws = new WebSocket('ws://127.0.0.1:3775/ws');
 
 	ws.onopen = () => { ws.send('hello') }
 
