@@ -21,7 +21,7 @@ from monitor_clipboard import run_qt_app
 routes = RouteTableDef()
 
 
-is_persian = rc('[\u0600-\u06ff]').search
+persian_match = rc('[\u0600-\u06ff]').search
 
 # see set_voice_names for how to retrieve and search available voices
 fa_voice: str = (
@@ -64,18 +64,21 @@ monitor_clipboard_args = [
 
 @routes.get('/ws')
 async def websocket_handler(request):
-    global cb_text
+    global cb_data
     info('new socket connection')
     ws = WebSocketResponse()
     await ws.prepare(request)
     try:
         while True:
             await back.wait()
-            cb_text = (await to_thread(cb_slave.recv)).strip()
+            cb_data = {
+                'text': (text := (await to_thread(cb_slave.recv)).strip()),
+                'is_fa': persian_match(text) is not None,
+            }
             if back.is_set() is False:
                 continue
             info('new clipboard text recieved')
-            await ws.send_str(cb_text)
+            await ws.send_json(cb_data)
     except Exception as e:
         exception(e)
         await ws.close()
@@ -93,7 +96,7 @@ async def _(request: Request) -> StreamResponse:
 
     try:
         async for message in Communicate(
-            cb_text, fa_voice if is_persian(cb_text) else en_voice
+            cb_data['text'], fa_voice if cb_data['is_fa'] else en_voice
         ).stream():
             match message['type']:
                 case 'audio':

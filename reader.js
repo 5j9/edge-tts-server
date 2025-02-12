@@ -68,9 +68,10 @@ function startWs() {
 	ws.onerror = ws.onclose = onCloseOrError;
 
 	ws.onmessage = (e) => {
-		var msg = e.data;
-		if (msg.length < 30) {
-			if (msg.length < 3) {
+		var j = JSON.parse(e.data);
+		var text = j['text']
+		if (text.length < 30) {
+			if (text.length < 3) {
 				toggleFront();
 				return;
 			}
@@ -81,7 +82,8 @@ function startWs() {
 			return;
 		}
 
-		editableField.textContent = msg;
+		editableField.dir = j['is_fa'] ? 'rtl' : 'ltr';
+		editableField.textContent = text;
 		play();
 	}
 
