@@ -1,5 +1,17 @@
 // @ts-check
 var audio = new Audio();
+/**@type{HTMLLinkElement} */
+// @ts-ignore
+var favicon = document.createElement('link');
+favicon.rel = 'icon'
+favicon.type = 'image/svg+xml'
+
+function setFavicon(emoji) {
+	favicon.href = 'data:image/svg+xml,' + `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    	<text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="black">${emoji}</text >
+	</svg > `
+}
+document.head.appendChild(favicon);
 
 async function play_pause() {
 	if (!audio.paused) {
@@ -32,10 +44,12 @@ async function toggleFront() {
 	activeFront = !activeFront;
 	if (activeFront) {
 		frontToggle.textContent = 'Front-end: On';
+		setFavicon('🔊');
 		// if paused in the middle, not finished playing
 		if (!audio.ended) { audio.play() }
 	} else {
 		frontToggle.textContent = 'Front-end: Off';
+		setFavicon('🔈');
 		audio.pause();
 	}
 }
