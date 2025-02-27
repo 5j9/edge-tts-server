@@ -84,11 +84,8 @@ function startWs() {
 	ws.onmessage = (e) => {
 		var j = JSON.parse(e.data);
 		var text = j['text']
-		if (text.length < 30) {
-			if (text.length < 3) {
-				toggleFront();
-				return;
-			}
+		if (text.length < 3) {
+			toggleFront();
 			return;
 		}
 
