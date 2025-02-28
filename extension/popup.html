@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fa">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Reader</title>
+    <style>
+        .editable {
+            white-space: pre-wrap;
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 100px;
+            width: 300px;
+        }
+
+        button,
+        input {
+            margin: 5px;
+        }
+
+        input[type="number"] {
+            width: 60px;
+        }
+    </style>
+</head>
+
+<body>
+    <button type="button" id="front-toggle">Front-end: On</button>
+    <button type="button" id="back-toggle">Back-end: On</button>
+    <button type="button" id="play-pause">▶️</button>
+    <button type="button" id="stop">⏹</button>
+    <div class="editable" contenteditable="true" id="editable_field" dir="ltr"></div>
+    <button id="clear">Clear</button>
+    <label for="playback-speed">Speed:</label>
+    <input type="number" id="playback-speed" step="0.1" min="0.1" max="4" value="2">
+    <script src="popup.js"></script>
+</body>
+
+</html>

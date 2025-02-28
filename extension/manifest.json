@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "Audio Reader Extension",
+    "version": "1.0",
+    "description": "Audio reader with WebSocket and toggle controls",
+    "permissions": [
+        "activeTab",
+        "background",
+        "offscreen",
+        "storage"
+    ],
+    "host_permissions": [
+        "http://127.0.0.1:3775/*",
+        "ws://127.0.0.1:3775/*"
+    ],
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "background": {
+        "service_worker": "background.js"
+    }
+}
