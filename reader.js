@@ -29,70 +29,48 @@ function stop() {
 async function play() {
 	audio.src = 'http://127.0.0.1:3775/audio';
 	audio.play().catch((e) => {
-		if (e != 'AbortError: The play() request was interrupted by a call to pause().') {
-			throw e;
-		}
+		console.error(e);
 	});
 }
 
 
-var activeFront = false;
-/** @type {HTMLElement} */
-// @ts-ignore
-var frontToggle = document.getElementById('front-toggle');
-async function toggleFront() {
-	activeFront = !activeFront;
-	if (activeFront) {
-		frontToggle.textContent = 'Front-end: On';
-		setFavicon('🔊');
-		// if paused in the middle, not finished playing
-		if (!audio.ended) { audio.play() }
-	} else {
-		frontToggle.textContent = 'Front-end: Off';
-		setFavicon('🔈');
-		audio.pause();
-	}
-}
-
+var monitoring = false;
 /** @type {HTMLElement} */
 // @ts-ignore
 var backToggle = document.getElementById('back-toggle');
 async function toggleBack() {
 	var r = await fetch('http://127.0.0.1:3775/back-toggle');
-	backToggle.textContent = await r.text();
+	backToggle.textContent = `${await r.text()}`
+	monitoring = !monitoring;
 }
 
 
 var ws;
+function onCloseOrError(e) {
+	ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null;
+	var dt = new Date();
+	editableField.textContent = `${dt}: WebSocket closed or error; will retry in 2 seconds ${e}`;
+	setTimeout(startWs, 2000);
+	ws.close();
+}
+
 function startWs() {
-	if (ws) { // Check if a WebSocket already exists
-		ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null;
-		ws.close();
-	}
 	console.log('new websocket')
-	ws = new WebSocket('ws://127.0.0.1:3775/ws');
-
-	ws.onopen = () => { ws.send('hello') }
-
-	function onCloseOrError(e) {
-		var dt = new Date();
-		editableField.textContent = `${dt}: WebSocket closed or error; will retry in 2 seconds ${e}`;
-		setTimeout(startWs, 2000);
+	try {
+		ws = new WebSocket('ws://127.0.0.1:3775/ws');
+	} catch {
+		console.log('new WebSocket failed.')
+		onCloseOrError();
+		return;
 	}
-	ws.onerror = ws.onclose = onCloseOrError;
 
+	ws.onerror = ws.onclose = onCloseOrError;
+	ws.onopen = () => {
+		ws.send(monitoring ? 'on' : 'off');
+	}
 	ws.onmessage = (e) => {
 		var j = JSON.parse(e.data);
 		var text = j['text']
-		if (text.length < 3) {
-			toggleFront();
-			return;
-		}
-
-		if (!activeFront) {
-			return;
-		}
-
 		editableField.dir = j['is_fa'] ? 'rtl' : 'ltr';
 		editableField.textContent = text;
 		play();

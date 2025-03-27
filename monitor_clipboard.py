@@ -11,10 +11,8 @@ clipboard = qt_app.clipboard()
 def skip(text: str):
     length = len(text)
     if length < 30:
-        if length > 3:
-            print(f'{strftime("%H:%M:%S")}: len(text) < 30.')
-            return True
-        return False
+        print(f'{strftime("%H:%M:%S")}: len(text) < 30.')
+        return True
     if text.count(' ') / len(text) < 0.05:
         print(f'{strftime("%H:%M:%S")}: space less than 5%.')
         return True

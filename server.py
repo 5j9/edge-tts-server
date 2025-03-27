@@ -1,6 +1,6 @@
 import sys
 from asyncio import Event, new_event_loop, to_thread
-from logging import error, exception, info
+from logging import INFO, basicConfig, error, exception, info
 from multiprocessing import Pipe, Process
 from pathlib import Path
 from re import compile as rc
@@ -18,8 +18,8 @@ from edge_tts import Communicate, VoicesManager
 
 from monitor_clipboard import run_qt_app
 
+basicConfig(level=INFO)
 routes = RouteTableDef()
-
 
 persian_match = rc('[\u0600-\u06ff]').search
 
@@ -43,17 +43,19 @@ all_origins = {'Access-Control-Allow-Origin': '*'}
 
 
 # This event will be cleared when back-end gets deactivated.
-back = Event()
-back.set()
+monitoring = Event()
 
 
 @routes.get('/back-toggle')
 async def _(_: Request) -> Response:
-    if back.is_set():
-        back.clear()
-        return Response(text='Back-end: Off', headers=all_origins)
-    back.set()
-    return Response(text='Back-end: On', headers=all_origins)
+    if monitoring.is_set():
+        monitoring.clear()
+        text = 'off'
+    else:
+        monitoring.set()
+        text = 'on'
+    info(f'Toggled to {text}.')
+    return Response(text=text, headers=all_origins)
 
 
 monitor_clipboard_args = [
@@ -61,23 +63,29 @@ monitor_clipboard_args = [
     str(Path(__file__).parent / 'monitor_clipboard.py'),
 ]
 
+cb_data = {'text': '', 'is_fa': False}
+
 
 @routes.get('/ws')
 async def websocket_handler(request):
     global cb_data
-    info('new socket connection')
+    info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
+    back_state = await ws.receive_str()
+    if back_state == 'on':
+        info('Monitoring is already turned on on front-end.')
+        monitoring.set()
     try:
         while True:
-            await back.wait()
+            await monitoring.wait()
             cb_data = {
                 'text': (text := (await to_thread(cb_slave.recv)).strip()),
                 'is_fa': persian_match(text) is not None,
             }
-            if back.is_set() is False:
+            if monitoring.is_set() is False:
                 continue
-            info('new clipboard text recieved')
+            info('New clipboard text recieved.')
             await ws.send_json(cb_data)
     except Exception as e:
         exception(e)
@@ -90,7 +98,7 @@ audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
 
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
-    info('serving audio started')
+    info('Serving audio started.')
     response = StreamResponse(status=200, reason='OK', headers=audio_headers)
     await response.prepare(request)
 
@@ -107,7 +115,7 @@ async def _(request: Request) -> StreamResponse:
     except Exception as e:
         error(f'{e!r}')
     else:
-        info('serving audio finished')
+        info('Serving audio finished.')
     return response
 
 
