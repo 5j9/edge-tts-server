@@ -1,4 +1,5 @@
 import sys
+import webbrowser
 from asyncio import Event, new_event_loop, to_thread
 from logging import INFO, basicConfig, error, exception, info
 from multiprocessing import Pipe, Process
@@ -58,9 +59,11 @@ async def _(_: Request) -> Response:
     return Response(text=text, headers=all_origins)
 
 
+this_dir = Path(__file__).parent
+
 monitor_clipboard_args = [
     sys.executable,
-    str(Path(__file__).parent / 'monitor_clipboard.py'),
+    str(this_dir / 'monitor_clipboard.py'),
 ]
 
 cb_data = {'text': '', 'is_fa': False}
@@ -96,6 +99,22 @@ async def websocket_handler(request):
 audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
 
 
+@routes.get('/reader.html')
+async def _(_):
+    return Response(
+        text=(this_dir / 'reader.html').read_bytes().decode(),
+        content_type='text/html',
+    )
+
+
+@routes.get('/reader.js')
+async def _(_):
+    return Response(
+        text=(this_dir / 'reader.js').read_bytes().decode(),
+        content_type='application/javascript',
+    )
+
+
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
     info('Serving audio started.')
@@ -129,6 +148,7 @@ if __name__ == '__main__':
     cb_master, cb_slave = Pipe(True)
     qt_process = Process(target=run_qt_app, args=(cb_master,))
     qt_process.start()
+    webbrowser.open('http://127.0.0.1:3775/reader.html')
     try:
         run_app(app, host='127.0.0.1', port=3775, loop=loop)
     except KeyboardInterrupt:

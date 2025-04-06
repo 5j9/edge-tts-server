@@ -5,13 +5,12 @@ var audio = new Audio();
 var favicon = document.createElement('link');
 favicon.rel = 'icon'
 favicon.type = 'image/svg+xml'
-
-function setFavicon(emoji) {
-	favicon.href = 'data:image/svg+xml,' + `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    	<text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="black">${emoji}</text >
-	</svg > `
-}
+favicon.href = `data:image/svg+xml,
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    	<text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="black">🗣️</text>
+	</svg >`
 document.head.appendChild(favicon);
+document.body.style.zoom = '2';
 
 async function play_pause() {
 	if (!audio.paused) {
