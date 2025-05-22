@@ -1,3 +1,5 @@
+__version__ = '0.1.dev0'
+
 import sys
 import webbrowser
 from asyncio import Event, new_event_loop, to_thread
