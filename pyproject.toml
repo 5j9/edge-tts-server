@@ -9,6 +9,7 @@ readme = 'README.md'
 requires-python = '>=3.12'
 dependencies = []
 dynamic = ['version']
+description = 'A Python program than monitors clibboard and reads the modified clibboard text.'
 
 [project.urls]
 Homepage = 'https://github.com/5j9/persian-edge-tts-server'
