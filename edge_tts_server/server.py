@@ -17,7 +17,7 @@ from aiohttp.web import (
 )
 from edge_tts import Communicate, VoicesManager
 
-from monitor_clipboard import run_qt_app
+from edge_tts_server.monitor_clipboard import run_qt_app
 
 basicConfig(level=INFO)
 routes = RouteTableDef()
