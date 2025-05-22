@@ -3,7 +3,7 @@ requires = ['flit_core >=3.2,<4']
 build-backend = 'flit_core.buildapi'
 
 [project]
-name = 'persian-edge-tts-server'
+name = 'edge-tts-server'
 authors = [{ name = '5j9', email = '5j9@users.noreply.github.com' }]
 readme = 'README.md'
 requires-python = '>=3.12'
@@ -12,7 +12,7 @@ dynamic = ['version']
 description = 'A Python program than monitors clibboard and reads the modified clibboard text.'
 
 [project.urls]
-Homepage = 'https://github.com/5j9/persian-edge-tts-server'
+Homepage = 'https://github.com/5j9/edge-tts-server'
 
 [tool.ruff]
 line-length = 79
