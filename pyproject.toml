@@ -7,7 +7,7 @@ name = 'edge-tts-server'
 authors = [{ name = '5j9', email = '5j9@users.noreply.github.com' }]
 readme = 'README.md'
 requires-python = '>=3.12'
-dependencies = []
+dependencies = ['PyQt6', 'aiohttp', 'edge_tts']
 dynamic = ['version']
 description = 'A Python program than monitors clibboard and reads the modified clibboard text.'
 
