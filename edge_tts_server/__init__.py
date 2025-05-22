@@ -39,7 +39,7 @@ async def set_voice_names():
     global fa_voice, en_voice
     voice_manager = await VoicesManager.create()
     fa_voice = voice_manager.find(Gender='Male', Language='fa')[0]['Name']
-    en_voice = voice_manager.find(ShortName='en-US-AvaNeural')[0]['Name']
+    en_voice = voice_manager.find(ShortName='en-US-AvaNeural')[0]['Name']  # type: ignore
 
 
 all_origins = {'Access-Control-Allow-Origin': '*'}
@@ -129,7 +129,7 @@ async def _(request: Request) -> StreamResponse:
         ).stream():
             match message['type']:
                 case 'audio':
-                    await response.write(message['data'])
+                    await response.write(message['data'])  # type: ignore
                 case _:
                     # debug(message)
                     pass

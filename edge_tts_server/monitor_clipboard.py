@@ -3,10 +3,11 @@ from functools import partial
 from multiprocessing.connection import PipeConnection
 from time import strftime
 
+from PyQt6.QtGui import QClipboard
 from PyQt6.QtWidgets import QApplication
 
 qt_app = QApplication([])
-clipboard = qt_app.clipboard()
+clipboard: QClipboard = qt_app.clipboard()  # type: ignore
 
 rm_urls = partial(re.compile(r'https?:\/\/[^\s]*').sub, '')
 
@@ -23,7 +24,7 @@ def skip(text: str):
 
 
 def on_clipboard_changed(cb_master: PipeConnection):
-    mime_data = clipboard.mimeData()
+    mime_data = clipboard.mimeData()  # type: ignore
     assert mime_data is not None
     if not mime_data.hasText():
         return
