@@ -5,7 +5,7 @@ build-backend = 'flit_core.buildapi'
 [project]
 name = 'persian-edge-tts-server'
 authors = [{ name = '5j9', email = '5j9@users.noreply.github.com' }]
-readme = 'README.rst'
+readme = 'README.md'
 requires-python = '>=3.12'
 dependencies = []
 dynamic = ['version']
