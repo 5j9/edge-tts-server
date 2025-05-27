@@ -1,5 +1,8 @@
 // @ts-check
 var audio = new Audio();
+audio.onended = () => {
+	ws.send('ended');
+};
 /**@type{HTMLLinkElement} */
 // @ts-ignore
 var favicon = document.createElement('link');
@@ -23,6 +26,10 @@ async function play_pause() {
 function stop() {
 	audio.pause();
 	audio.currentTime = 0;
+}
+
+function next() {
+	ws.send('next');
 }
 
 async function play() {

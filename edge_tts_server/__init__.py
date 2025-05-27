@@ -2,7 +2,7 @@ __version__ = '0.1.dev0'
 
 import sys
 import webbrowser
-from asyncio import Event, new_event_loop, to_thread
+from asyncio import Event, Queue, new_event_loop, sleep, to_thread
 from logging import INFO, basicConfig, error, exception, info
 from multiprocessing import Pipe, Process
 from pathlib import Path
@@ -48,6 +48,11 @@ all_origins = {'Access-Control-Allow-Origin': '*'}
 # This event will be cleared when back-end gets deactivated.
 monitoring = Event()
 
+# Queue to store incoming clipboard texts
+in_q: Queue[str] = Queue(maxsize=10)
+# Cache for pre-generated audio data
+out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=10)
+
 
 @routes.get('/back-toggle')
 async def _(_: Request) -> Response:
@@ -71,9 +76,48 @@ monitor_clipboard_args = [
 cb_data = {'text': '', 'is_fa': False}
 
 
+async def prefetch_audio():
+    """Prefetch audio for up to two texts in the queue."""
+    while True:
+        await monitoring.wait()
+        text = await in_q.get()
+        is_fa = persian_match(text) is not None
+        voice = fa_voice if is_fa else en_voice
+        info(f'Prefetching audio for: {text[:30]}...')
+        audio_q: Queue[bytes] = Queue()
+        await out_q.put((text, is_fa, audio_q))
+        try:
+            async for message in Communicate(text, voice).stream():
+                if message['type'] == 'audio':
+                    await audio_q.put(message['data'])  # type: ignore
+            await audio_q.put(b'')
+            info(f'Audio cached for: {text[:30]}...')
+        except Exception as e:
+            error(f'Error prefetching audio for {text[:30]}...: {e!r}')
+        finally:
+            in_q.task_done()
+        await sleep(0.1)  # Prevent tight loop
+
+
+async def clipboard_monitor(cb_slave):
+    """Monitor clipboard and add texts to queue."""
+    while True:
+        await monitoring.wait()
+        try:
+            text = (await to_thread(cb_slave.recv)).strip()
+            if not monitoring.is_set():
+                continue
+            if text:
+                await in_q.put(text)
+                info(f'Added to queue: {text[:30]}...')
+        except Exception as e:
+            exception(f'Error in clipboard monitor: {e}')
+        await sleep(0.1)
+
+
 @routes.get('/ws')
 async def websocket_handler(request):
-    global cb_data
+    global audio_q
     info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
@@ -84,14 +128,10 @@ async def websocket_handler(request):
     try:
         while True:
             await monitoring.wait()
-            cb_data = {
-                'text': (text := (await to_thread(cb_slave.recv)).strip()),
-                'is_fa': persian_match(text) is not None,
-            }
-            if monitoring.is_set() is False:
-                continue
-            info('New clipboard text recieved.')
-            await ws.send_json(cb_data)
+            text, is_fa, audio_q = await out_q.get()
+            info('New clipboard text is being sent to front-end.')
+            await ws.send_json({'text': text, 'is_fa': is_fa})
+            await ws.receive_str()  # wait for front-end to finish
     except Exception as e:
         exception(e)
         await ws.close()
@@ -119,24 +159,20 @@ async def _(_):
 
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
+    global audio_q
     info('Serving audio started.')
     response = StreamResponse(status=200, reason='OK', headers=audio_headers)
     await response.prepare(request)
-
     try:
-        async for message in Communicate(
-            cb_data['text'], fa_voice if cb_data['is_fa'] else en_voice
-        ).stream():
-            match message['type']:
-                case 'audio':
-                    await response.write(message['data'])  # type: ignore
-                case _:
-                    # debug(message)
-                    pass
+        while True:
+            data = await audio_q.get()
+            if not data:
+                break
+            await response.write(data)
+            audio_q.task_done()
     except Exception as e:
         error(f'{e!r}')
-    else:
-        info('Serving audio finished.')
+    info('Serving audio finished.')
     return response
 
 
@@ -150,8 +186,14 @@ if __name__ == '__main__':
     cb_master, cb_slave = Pipe(True)
     qt_process = Process(target=run_qt_app, args=(cb_master,))
     qt_process.start()
+    loop.create_task(clipboard_monitor(cb_slave))
+    loop.create_task(prefetch_audio())
     webbrowser.open('http://127.0.0.1:3775/reader.html')
     try:
         run_app(app, host='127.0.0.1', port=3775, loop=loop)
     except KeyboardInterrupt:
         pass
+    finally:
+        qt_process.terminate()
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
