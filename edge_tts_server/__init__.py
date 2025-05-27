@@ -26,7 +26,7 @@ routes = RouteTableDef()
 
 persian_match = rc('[\u0600-\u06ff]').search
 
-# see set_voice_names for how to retrieve and search available voices
+# See set_voice_names for how to retrieve and search available voices
 fa_voice: str = (
     'Microsoft Server Speech Text to Speech Voice (fa-IR, FaridNeural)'
 )
@@ -44,13 +44,12 @@ async def set_voice_names():
 
 all_origins = {'Access-Control-Allow-Origin': '*'}
 
-
 # This event will be cleared when back-end gets deactivated.
 monitoring = Event()
 
 # Queue to store incoming clipboard texts
 in_q: Queue[str] = Queue(maxsize=10)
-# Cache for pre-generated audio data
+# Queue to store pre-generated audio data (text, is_fa, audio_q)
 out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=10)
 
 
@@ -73,29 +72,30 @@ monitor_clipboard_args = [
     str(this_dir / 'monitor_clipboard.py'),
 ]
 
-cb_data = {'text': '', 'is_fa': False}
-
 
 async def prefetch_audio():
-    """Prefetch audio for up to two texts in the queue."""
+    """Prefetch audio for all texts in the queue."""
     while True:
         await monitoring.wait()
-        text = await in_q.get()
-        is_fa = persian_match(text) is not None
-        voice = fa_voice if is_fa else en_voice
-        info(f'Prefetching audio for: {text[:30]}...')
-        audio_q: Queue[bytes] = Queue()
-        await out_q.put((text, is_fa, audio_q))
         try:
-            async for message in Communicate(text, voice).stream():
-                if message['type'] == 'audio':
-                    await audio_q.put(message['data'])  # type: ignore
-            await audio_q.put(b'')
-            info(f'Audio cached for: {text[:30]}...')
+            text = await in_q.get()
+            is_fa = persian_match(text) is not None
+            voice = fa_voice if is_fa else en_voice
+            info(f'Prefetching audio for: {text[:30]}...')
+            audio_q: Queue[bytes] = Queue()
+            await out_q.put((text, is_fa, audio_q))
+            try:
+                async for message in Communicate(text, voice).stream():
+                    if message['type'] == 'audio':
+                        await audio_q.put(message['data'])  # type: ignore
+                await audio_q.put(b'')  # Sentinel for end of audio
+                info(f'Audio cached for: {text[:30]}...')
+            except Exception as e:
+                error(f'Error prefetching audio for {text[:30]}...: {e!r}')
+            finally:
+                in_q.task_done()
         except Exception as e:
-            error(f'Error prefetching audio for {text[:30]}...: {e!r}')
-        finally:
-            in_q.task_done()
+            error(f'Error in prefetch_audio: {e!r}')
         await sleep(0.1)  # Prevent tight loop
 
 
@@ -117,7 +117,6 @@ async def clipboard_monitor(cb_slave):
 
 @routes.get('/ws')
 async def websocket_handler(request):
-    global audio_q
     info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
@@ -129,11 +128,14 @@ async def websocket_handler(request):
         while True:
             await monitoring.wait()
             text, is_fa, audio_q = await out_q.get()
-            info('New clipboard text is being sent to front-end.')
+            info('Sending new clipboard text to front-end.')
             await ws.send_json({'text': text, 'is_fa': is_fa})
-            await ws.receive_str()  # wait for front-end to finish
+            # Store audio_q in request.app for /audio endpoint
+            request.app['current_audio_q'] = audio_q
+            await ws.receive_str()  # Wait for front-end to finish
+            out_q.task_done()  # Mark as done after front-end processes
     except Exception as e:
-        exception(e)
+        exception(f'WebSocket error: {e}')
         await ws.close()
         return ws
 
@@ -159,19 +161,22 @@ async def _(_):
 
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
-    global audio_q
     info('Serving audio started.')
     response = StreamResponse(status=200, reason='OK', headers=audio_headers)
     await response.prepare(request)
+    audio_q = request.app.get('current_audio_q')
+    if not audio_q:
+        error('No audio queue available.')
+        return response
     try:
         while True:
             data = await audio_q.get()
-            if not data:
+            if not data:  # Sentinel for end of audio
                 break
             await response.write(data)
             audio_q.task_done()
     except Exception as e:
-        error(f'{e!r}')
+        error(f'Audio serving error: {e!r}')
     info('Serving audio finished.')
     return response
 
