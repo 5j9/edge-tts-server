@@ -29,6 +29,9 @@ function stop() {
 }
 
 function next() {
+	if (audio.paused) {
+		return;
+	}
 	ws.send('next');
 }
 
