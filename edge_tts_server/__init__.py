@@ -118,6 +118,7 @@ async def clipboard_monitor(cb_slave):
 
 @routes.get('/ws')
 async def websocket_handler(request):
+    global current_audio_q
     logger.info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
@@ -132,7 +133,7 @@ async def websocket_handler(request):
             logger.info('Sending new clipboard text to front-end.')
             await ws.send_json({'text': text, 'is_fa': is_fa})
             # Store audio_q in request.app for /audio endpoint
-            request.app['current_audio_q'] = audio_q
+            current_audio_q = audio_q
             await ws.receive_str()  # Wait for front-end to finish
             for msg in ws:  # Process any other incoming messages
                 logger.debug(f'ignoring {msg=}')
@@ -164,13 +165,10 @@ async def _(_):
 
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
+    audio_q = current_audio_q
     logger.info('Serving audio started.')
     response = StreamResponse(status=200, reason='OK', headers=audio_headers)
     await response.prepare(request)
-    audio_q = request.app.get('current_audio_q')
-    if not audio_q:
-        logger.error('No audio queue available.')
-        return response
     try:
         while True:
             data = await audio_q.get()
