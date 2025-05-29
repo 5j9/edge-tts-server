@@ -1,8 +1,8 @@
 import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
-from time import strftime
 
+from loguru import logger
 from PyQt6.QtGui import QClipboard
 from PyQt6.QtWidgets import QApplication
 
@@ -15,10 +15,10 @@ rm_urls = partial(re.compile(r'https?:\/\/[^\s]*').sub, '')
 def skip(text: str):
     length = len(text)
     if length < 30:
-        print(f'{strftime("%H:%M:%S")}: len(text) < 30.')
+        logger.info('len(text) < 30.')
         return True
     if text.count(' ') / len(text) < 0.05:
-        print(f'{strftime("%H:%M:%S")}: space less than 5%.')
+        logger.info('space less than 5%.')
         return True
     return False
 

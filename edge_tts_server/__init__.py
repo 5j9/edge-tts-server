@@ -3,7 +3,6 @@ __version__ = '0.1.dev0'
 import sys
 import webbrowser
 from asyncio import Event, Queue, new_event_loop, sleep, to_thread
-from logging import INFO, basicConfig, error, exception, info
 from multiprocessing import Pipe, Process
 from pathlib import Path
 from re import compile as rc
@@ -18,10 +17,10 @@ from aiohttp.web import (
     run_app,
 )
 from edge_tts import Communicate, VoicesManager
+from loguru import logger
 
 from edge_tts_server.monitor_clipboard import run_qt_app
 
-basicConfig(level=INFO)
 routes = RouteTableDef()
 
 persian_match = rc('[\u0600-\u06ff]').search
@@ -61,7 +60,7 @@ async def _(_: Request) -> Response:
     else:
         monitoring.set()
         text = 'on'
-    info(f'Toggled to {text}.')
+    logger.info(f'Toggled to {text}.')
     return Response(text=text, headers=all_origins)
 
 
@@ -81,7 +80,7 @@ async def prefetch_audio():
             text = await in_q.get()
             is_fa = persian_match(text) is not None
             voice = fa_voice if is_fa else en_voice
-            info(f'Prefetching audio for: {text[:30]}...')
+            logger.info(f'Prefetching audio for: {text[:30]}...')
             audio_q: Queue[bytes] = Queue()
             await out_q.put((text, is_fa, audio_q))
             try:
@@ -89,13 +88,15 @@ async def prefetch_audio():
                     if message['type'] == 'audio':
                         await audio_q.put(message['data'])  # type: ignore
                 await audio_q.put(b'')  # Sentinel for end of audio
-                info(f'Audio cached for: {text[:30]}...')
+                logger.info(f'Audio cached for: {text[:30]}...')
             except Exception as e:
-                error(f'Error prefetching audio for {text[:30]}...: {e!r}')
+                logger.error(
+                    f'Error prefetching audio for {text[:30]}...: {e!r}'
+                )
             finally:
                 in_q.task_done()
         except Exception as e:
-            error(f'Error in prefetch_audio: {e!r}')
+            logger.error(f'Error in prefetch_audio: {e!r}')
         await sleep(0.1)  # Prevent tight loop
 
 
@@ -109,35 +110,35 @@ async def clipboard_monitor(cb_slave):
                 continue
             if text:
                 await in_q.put(text)
-                info(f'Added to queue: {text[:30]}...')
+                logger.info(f'Added to queue: {text[:30]}...')
         except Exception as e:
-            exception(f'Error in clipboard monitor: {e}')
+            logger.exception(f'Error in clipboard monitor: {e}')
         await sleep(0.1)
 
 
 @routes.get('/ws')
 async def websocket_handler(request):
-    info('New socket connection.')
+    logger.info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
     back_state = await ws.receive_str()
     if back_state == 'on':
-        info('Monitoring is already turned on on front-end.')
+        logger.info('Monitoring is already turned on on front-end.')
         monitoring.set()
     try:
         while True:
             await monitoring.wait()
             text, is_fa, audio_q = await out_q.get()
-            info('Sending new clipboard text to front-end.')
+            logger.info('Sending new clipboard text to front-end.')
             await ws.send_json({'text': text, 'is_fa': is_fa})
             # Store audio_q in request.app for /audio endpoint
             request.app['current_audio_q'] = audio_q
             await ws.receive_str()  # Wait for front-end to finish
-            for _ in ws:  # Process any other incoming messages
-                pass
+            for msg in ws:  # Process any other incoming messages
+                logger.debug(f'ignoring {msg=}')
             out_q.task_done()  # Mark as done after front-end processes
     except Exception as e:
-        exception(f'WebSocket error: {e}')
+        logger.exception(f'WebSocket error: {e}')
         await ws.close()
         return ws
 
@@ -163,12 +164,12 @@ async def _(_):
 
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
-    info('Serving audio started.')
+    logger.info('Serving audio started.')
     response = StreamResponse(status=200, reason='OK', headers=audio_headers)
     await response.prepare(request)
     audio_q = request.app.get('current_audio_q')
     if not audio_q:
-        error('No audio queue available.')
+        logger.error('No audio queue available.')
         return response
     try:
         while True:
@@ -178,8 +179,8 @@ async def _(request: Request) -> StreamResponse:
             await response.write(data)
             audio_q.task_done()
     except Exception as e:
-        error(f'Audio serving error: {e!r}')
-    info('Serving audio finished.')
+        logger.error(f'Audio serving error: {e!r}')
+    logger.info('Serving audio finished.')
     return response
 
 
