@@ -28,11 +28,16 @@ function stop() {
 	audio.currentTime = 0;
 }
 
+/**@type{HTMLButtonElement} */
+// @ts-ignore
+const nextButton = document.getElementById('next');
+
 function next() {
-	if (audio.paused) {
+	if (nextButton.disabled) {
 		return;
 	}
 	ws.send('next');
+	nextButton.disabled = true;
 }
 
 async function play() {
@@ -82,6 +87,7 @@ function startWs() {
 		var text = j['text']
 		editableField.dir = j['is_fa'] ? 'rtl' : 'ltr';
 		editableField.textContent = text;
+		nextButton.disabled = false;
 		play();
 	}
 

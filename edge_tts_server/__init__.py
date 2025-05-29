@@ -133,6 +133,8 @@ async def websocket_handler(request):
             # Store audio_q in request.app for /audio endpoint
             request.app['current_audio_q'] = audio_q
             await ws.receive_str()  # Wait for front-end to finish
+            for _ in ws:  # Process any other incoming messages
+                pass
             out_q.task_done()  # Mark as done after front-end processes
     except Exception as e:
         exception(f'WebSocket error: {e}')
