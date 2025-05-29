@@ -36,8 +36,8 @@ function next() {
 	if (nextButton.disabled) {
 		return;
 	}
-	ws.send('next');
 	nextButton.disabled = true;
+	ws.send('next');
 }
 
 async function play() {
