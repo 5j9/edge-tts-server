@@ -17,7 +17,7 @@ from aiohttp.web import (
     run_app,
 )
 from edge_tts import Communicate, VoicesManager
-from loguru import logger
+from logging_ import logger
 
 from edge_tts_server.monitor_clipboard import run_qt_app
 

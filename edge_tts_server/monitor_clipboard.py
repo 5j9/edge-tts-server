@@ -2,7 +2,7 @@ import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
 
-from loguru import logger
+from logging_ import logger
 from PyQt6.QtGui import QClipboard
 from PyQt6.QtWidgets import QApplication
 
