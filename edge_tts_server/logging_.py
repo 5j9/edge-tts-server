@@ -10,5 +10,5 @@ logger.add(
     sys.stderr,  # Output to console
     level='DEBUG',
     # This format includes color tags for time, level, and message
-    format='<green>{time:%H:%M%S}</green> | <level>{level: <8}</level> | <cyan>{file}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',
+    format='<green>{time:%H:%M:%S}</green> | <level>{level: <8}</level> | <cyan>{file}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',
 )
