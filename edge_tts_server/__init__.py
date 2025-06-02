@@ -103,7 +103,6 @@ async def prefetch_audio():
 async def clipboard_monitor(cb_slave):
     """Monitor clipboard and add texts to queue."""
     while True:
-        await monitoring.wait()
         try:
             text = (await to_thread(cb_slave.recv)).strip()
             if not monitoring.is_set():
