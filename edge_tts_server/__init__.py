@@ -49,7 +49,7 @@ monitoring = Event()
 # Queue to store incoming clipboard texts
 in_q: Queue[str] = Queue(maxsize=50)
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
-out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=50)
+out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=5)
 
 
 @routes.get('/back-toggle')
