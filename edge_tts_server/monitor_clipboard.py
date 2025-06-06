@@ -1,6 +1,7 @@
 import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
+from time import time
 
 from logging_ import logger
 from PyQt6.QtGui import QClipboard
@@ -23,17 +24,30 @@ def skip(text: str):
     return False
 
 
+last_processed_time = 0.0
+DEBOUNCE_SECONDS = 0.1
+
+
 def on_clipboard_changed(cb_master: PipeConnection):
-    mime_data = clipboard.mimeData()  # type: ignore
+    global last_processed_time
+    current_time = time()
+    if current_time - last_processed_time < DEBOUNCE_SECONDS:
+        logger.info('Debouncing duplicate signal')
+        return
+    last_processed_time = current_time
+    mime_data = clipboard.mimeData()
     assert mime_data is not None
     if not mime_data.hasText():
         return
     text = mime_data.text()
     if skip(text) is True:
         return
+    logger.info(f'Received text: {text[:30]}')
     cb_master.send(rm_urls(text))
 
 
 def run_qt_app(cb_master: PipeConnection):
-    clipboard.dataChanged.connect(partial(on_clipboard_changed, cb_master))
+    clipboard.dataChanged.connect(
+        partial(on_clipboard_changed, cb_master=cb_master)
+    )
     qt_app.exec()
