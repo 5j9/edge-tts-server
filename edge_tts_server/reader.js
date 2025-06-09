@@ -15,17 +15,25 @@ favicon.href = `data:image/svg+xml,
 document.head.appendChild(favicon);
 document.body.style.zoom = '2';
 
+/**@type{HTMLButtonElement} */
+// @ts-ignore
+const pausePlayButton = document.getElementById('play_pause');
+
 async function play_pause() {
 	if (!audio.paused) {
 		audio.pause();
+		pausePlayButton.textContent = '▶';
 		return;
 	}
+
 	audio.play();
+	pausePlayButton.textContent = '⏸';
 }
 
 function stop() {
 	audio.pause();
 	audio.currentTime = 0;
+	pausePlayButton.textContent = '▶';
 }
 
 /**@type{HTMLButtonElement} */
