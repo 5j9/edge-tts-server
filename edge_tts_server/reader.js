@@ -33,9 +33,6 @@ function stop() {
 const nextButton = document.getElementById('next');
 
 function next() {
-	if (nextButton.disabled) {
-		return;
-	}
 	nextButton.disabled = true;
 	ws.send('next');
 }
