@@ -1,7 +1,10 @@
+const port = '3775'
+const home = `http://127.0.0.1:${port}/`
+
 // @ts-check
 var audio = new Audio();
 audio.onended = () => {
-	ws.send('ended');
+	fetch(home + 'next');
 };
 /**@type{HTMLLinkElement} */
 // @ts-ignore
@@ -42,11 +45,11 @@ const nextButton = document.getElementById('next');
 
 function next() {
 	nextButton.disabled = true;
-	ws.send('next');
+	fetch(home + 'next');
 }
 
 async function play() {
-	audio.src = 'http://127.0.0.1:3775/audio';
+	audio.src = 'audio';
 	audio.play().catch((e) => {
 		console.error(e);
 	});
@@ -58,7 +61,7 @@ var monitoring = false;
 // @ts-ignore
 var backToggle = document.getElementById('back-toggle');
 async function toggleBack() {
-	var r = await fetch('http://127.0.0.1:3775/back-toggle');
+	var r = await fetch(home + 'back-toggle');
 	backToggle.textContent = `${await r.text()}`
 	monitoring = !monitoring;
 }
@@ -76,7 +79,7 @@ function onCloseOrError(e) {
 function startWs() {
 	console.log('new websocket')
 	try {
-		ws = new WebSocket('ws://127.0.0.1:3775/ws');
+		ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
 	} catch {
 		console.log('new WebSocket failed.')
 		onCloseOrError();

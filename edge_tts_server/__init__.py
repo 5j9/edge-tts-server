@@ -121,6 +121,16 @@ async def clipboard_monitor(cb_slave):
         await sleep(0.1)
 
 
+next_request = Event()
+
+
+@routes.get('/next')
+async def _(request: Request) -> Response:
+    next_request.set()
+    logger.debug(f'next request recieved: {request.text=}')
+    return Response()
+
+
 @routes.get('/ws')
 async def _(request):
     global current_audio_q
@@ -136,12 +146,11 @@ async def _(request):
             await monitoring.wait()
             text, is_fa, audio_q = await out_q.get()
             logger.info('Sending new clipboard text to front-end.')
-            await ws.send_json({'text': text, 'is_fa': is_fa})
             # Store audio_q in request.app for /audio endpoint
             current_audio_q = audio_q
-            await ws.receive_str()  # Wait for front-end to finish
-            for msg in ws:  # Process any other incoming messages
-                logger.debug(f'ignoring {msg=}')
+            next_request.clear()
+            await ws.send_json({'text': text, 'is_fa': is_fa})
+            await next_request.wait()
             out_q.task_done()  # Mark as done after front-end processes
     except Exception as e:
         logger.exception(f'WebSocket error: {e}')
