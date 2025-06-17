@@ -127,7 +127,6 @@ next_request = Event()
 @routes.get('/next')
 async def _(request: Request) -> Response:
     next_request.set()
-    logger.debug(f'next request recieved: {request.text=}')
     return Response()
 
 
