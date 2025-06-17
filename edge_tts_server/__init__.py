@@ -2,7 +2,13 @@ __version__ = '0.1.dev0'
 
 import sys
 import webbrowser
-from asyncio import Event, Queue, new_event_loop, sleep, to_thread
+from asyncio import (
+    Event,
+    Queue,
+    new_event_loop,
+    sleep,
+    to_thread,
+)
 from multiprocessing import Pipe, Process
 from pathlib import Path
 from re import compile as rc
@@ -116,13 +122,13 @@ async def clipboard_monitor(cb_slave):
 
 
 @routes.get('/ws')
-async def websocket_handler(request):
+async def _(request):
     global current_audio_q
     logger.info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
-    back_state = await ws.receive_str()
-    if back_state == 'on':
+    state = await ws.receive_str()
+    if state == 'on':
         logger.info('Monitoring is already turned on on front-end.')
         monitoring.set()
     try:
