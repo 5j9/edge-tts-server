@@ -130,9 +130,12 @@ async def _(request: Request) -> Response:
     return Response()
 
 
+websocket_connected = False
+
+
 @routes.get('/ws')
 async def _(request):
-    global current_audio_q
+    global current_audio_q, websocket_connected
     logger.info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
@@ -140,6 +143,7 @@ async def _(request):
     if state == 'on':
         logger.info('Monitoring is already turned on on front-end.')
         monitoring.set()
+    websocket_connected = True
     while True:
         await monitoring.wait()
         text, is_fa, audio_q = await out_q.get()
@@ -151,6 +155,7 @@ async def _(request):
             await ws.send_json({'text': text, 'is_fa': is_fa})
         except Exception as e:
             logger.exception(f'WebSocket error: {e}')
+            websocket_connected = False
             await ws.close()
             return ws
         finally:
@@ -196,19 +201,27 @@ async def _(request: Request) -> StreamResponse:
     return response
 
 
+async def open_tab_if_no_conn():
+    await sleep(5.0)
+    if websocket_connected is False:
+        webbrowser.open('http://127.0.0.1:3775/reader.html')
+
+
 if __name__ == '__main__':
     app = Application()
     app.add_routes(routes)
 
     loop = new_event_loop()
+    create_task = loop.create_task
     # loop.create_task(set_voice_names())
 
     cb_master, cb_slave = Pipe(True)
     qt_process = Process(target=run_qt_app, args=(cb_master,))
     qt_process.start()
-    loop.create_task(clipboard_monitor(cb_slave))
-    loop.create_task(prefetch_audio())
-    webbrowser.open('http://127.0.0.1:3775/reader.html')
+    clipboard_monitor_task = create_task(clipboard_monitor(cb_slave))
+    prefetch_audio_task = create_task(prefetch_audio())
+    open_tab_task = create_task(open_tab_if_no_conn())
+
     try:
         run_app(app, host='127.0.0.1', port=3775, loop=loop)
     except KeyboardInterrupt:
