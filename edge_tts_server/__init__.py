@@ -140,21 +140,22 @@ async def _(request):
     if state == 'on':
         logger.info('Monitoring is already turned on on front-end.')
         monitoring.set()
-    try:
-        while True:
-            await monitoring.wait()
-            text, is_fa, audio_q = await out_q.get()
-            logger.info('Sending new clipboard text to front-end.')
-            # Store audio_q in request.app for /audio endpoint
-            current_audio_q = audio_q
-            next_request.clear()
+    while True:
+        await monitoring.wait()
+        text, is_fa, audio_q = await out_q.get()
+        logger.info('Sending new clipboard text to front-end.')
+        # Store audio_q in request.app for /audio endpoint
+        current_audio_q = audio_q
+        next_request.clear()
+        try:
             await ws.send_json({'text': text, 'is_fa': is_fa})
-            await next_request.wait()
-            out_q.task_done()  # Mark as done after front-end processes
-    except Exception as e:
-        logger.exception(f'WebSocket error: {e}')
-        await ws.close()
-        return ws
+        except Exception as e:
+            logger.exception(f'WebSocket error: {e}')
+            await ws.close()
+            return ws
+        finally:
+            out_q.task_done()
+        await next_request.wait()
 
 
 audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
