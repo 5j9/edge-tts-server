@@ -55,7 +55,7 @@ monitoring = Event()
 # Queue to store incoming clipboard texts
 in_q: Queue[str] = Queue(maxsize=50)
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
-out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=5)
+out_q: Queue[tuple[str, bool, Queue[bytes | None]]] = Queue(maxsize=5)
 
 
 @routes.get('/back-toggle')
@@ -87,19 +87,19 @@ async def prefetch_audio():
             is_fa = persian_match(text) is not None
             voice = fa_voice if is_fa else en_voice
             logger.info(f'Prefetching audio for: {text[:30]}...')
-            audio_q: Queue[bytes] = Queue()
+            audio_q: Queue[bytes | None] = Queue()
             await out_q.put((text, is_fa, audio_q))
             try:
                 async for message in Communicate(text, voice).stream():
                     if message['type'] == 'audio':
                         await audio_q.put(message['data'])  # type: ignore
-                await audio_q.put(b'')  # Sentinel for end of audio
                 logger.info(f'Audio cached for: {text[:30]}...')
             except Exception as e:
                 logger.error(
                     f'Error prefetching audio for {text[:30]}...: {e!r}'
                 )
             finally:
+                await audio_q.put(None)  # Sentinel for end of audio
                 in_q.task_done()
         except Exception as e:
             logger.error(f'Error in prefetch_audio: {e!r}')
@@ -191,7 +191,7 @@ async def _(request: Request) -> StreamResponse:
     try:
         while True:
             data = await audio_q.get()
-            if not data:  # Sentinel for end of audio
+            if data is None:  # Sentinel for end of audio
                 break
             await response.write(data)
             audio_q.task_done()
