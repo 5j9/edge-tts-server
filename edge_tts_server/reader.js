@@ -59,11 +59,11 @@ async function play() {
 var monitoring = false;
 /** @type {HTMLElement} */
 // @ts-ignore
-var backToggle = document.getElementById('back-toggle');
-async function toggleBack() {
-	var r = await fetch(home + 'back-toggle');
-	backToggle.textContent = `${await r.text()}`
+var backToggle = document.getElementById('toggle-monitoring');
+async function toggleMonitoring() {
 	monitoring = !monitoring;
+	var r = await fetch(home + 'monitoring', { method: 'put', body: monitoring });
+	backToggle.textContent = monitoring ? 'ON' : 'OFF';
 }
 
 
@@ -87,8 +87,8 @@ function startWs() {
 	}
 
 	ws.onerror = ws.onclose = onCloseOrError;
-	ws.onopen = () => {
-		ws.send(monitoring ? 'on' : 'off');
+	ws.onopen = () => { // sync up the monitoring state with server
+		fetch(home + 'monitoring', { method: 'PUT', body: monitoring });
 	}
 	ws.onmessage = (e) => {
 		var j = JSON.parse(e.data);

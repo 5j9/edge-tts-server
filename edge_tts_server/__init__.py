@@ -58,16 +58,15 @@ in_q: Queue[str] = Queue(maxsize=50)
 out_q: Queue[tuple[str, bool, Queue[bytes | None]]] = Queue(maxsize=5)
 
 
-@routes.get('/back-toggle')
-async def _(_: Request) -> Response:
-    if monitoring.is_set():
-        monitoring.clear()
-        text = 'off'
-    else:
+@routes.put('/monitoring')
+async def _(request: Request) -> Response:
+    new_state = await request.json()
+    if new_state is True:
         monitoring.set()
-        text = 'on'
-    logger.info(f'Toggled to {text}.')
-    return Response(text=text, headers=all_origins)
+    else:
+        monitoring.clear()
+    logger.info(f'monitoring state: {new_state}')
+    return Response()
 
 
 this_dir = Path(__file__).parent
@@ -139,10 +138,6 @@ async def _(request):
     logger.info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
-    state = await ws.receive_str()
-    if state == 'on':
-        logger.info('Monitoring is already turned on on front-end.')
-        monitoring.set()
     websocket_connected = True
     while True:
         await monitoring.wait()
