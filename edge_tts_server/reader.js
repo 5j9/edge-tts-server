@@ -20,9 +20,9 @@ document.body.style.zoom = '2';
 
 /**@type{HTMLButtonElement} */
 // @ts-ignore
-const pausePlayButton = document.getElementById('play_pause');
+const pausePlayButton = document.getElementById('pauseOrPlay');
 
-async function play_pause() {
+async function pauseOrPlay() {
 	if (!audio.paused) {
 		audio.pause();
 		pausePlayButton.textContent = '⏸';
@@ -31,6 +31,14 @@ async function play_pause() {
 
 	audio.play();
 	pausePlayButton.textContent = '▶';
+}
+
+function jumpBackward() {
+	audio.currentTime -= 10;
+}
+
+function jumpForward() {
+	audio.currentTime += 10;
 }
 
 function stop() {
