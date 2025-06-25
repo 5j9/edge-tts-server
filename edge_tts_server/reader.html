@@ -1,11 +1,20 @@
 <html lang="fa">
 <meta charset="UTF-8">
-<button type="button" onclick="toggleMonitoring()" id='toggle-monitoring'>OFF</button>
-<button id="play_pause" type="button" onclick="play_pause()">▶</button>
-<button type="button" onclick="stop()">⏹</button>
-<button id="next" type="button" onclick="next()">⏭</button>
-<div class="editable" contenteditable="true" id="editable_field" style="white-space: pre-wrap;" dir="ltr">
-</div>
-<button id='clear'>CLEAR</button>
+
+<body>
+    <div>
+        <button type="button" onclick="toggleMonitoring()" id='toggle-monitoring'>OFF</button>
+        <button type="button" onclick="play_pause()" id="play_pause">▶</button>
+        <button type="button" onclick="stop()">⏹</button>
+        <button type="button" onclick="next()" id="next">⏭</button>
+    </div>
+    <div class="editable" contenteditable="true" id="editable_field" style="white-space: pre-wrap;" dir="ltr">
+    </div>
+    <button id='clear'>CLEAR</button>
+
+</body>
+
 <script src="./reader.js"></script>
 <link rel="stylesheet" href="./reader.css">
+
+</html>
