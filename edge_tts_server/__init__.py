@@ -177,6 +177,14 @@ async def _(_):
     )
 
 
+@routes.get('/reader.css')
+async def _(_):
+    return Response(
+        text=(this_dir / 'reader.css').read_bytes().decode(),
+        content_type='text/css',
+    )
+
+
 @routes.get('/audio')
 async def _(request: Request) -> StreamResponse:
     audio_q = current_audio_q
