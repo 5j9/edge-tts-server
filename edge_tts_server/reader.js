@@ -25,18 +25,18 @@ const pausePlayButton = document.getElementById('play_pause');
 async function play_pause() {
 	if (!audio.paused) {
 		audio.pause();
-		pausePlayButton.textContent = '▶';
+		pausePlayButton.textContent = '⏸';
 		return;
 	}
 
 	audio.play();
-	pausePlayButton.textContent = '⏸';
+	pausePlayButton.textContent = '▶';
 }
 
 function stop() {
 	audio.pause();
 	audio.currentTime = 0;
-	pausePlayButton.textContent = '▶';
+	pausePlayButton.textContent = '⏸';
 }
 
 /**@type{HTMLButtonElement} */
