@@ -52,6 +52,7 @@ function stop() {
 const nextButton = document.getElementById('next');
 
 function next() {
+	audio.pause();
 	nextButton.disabled = true;
 	fetch(home + 'next');
 }
