@@ -81,27 +81,24 @@ async def prefetch_audio():
     """Prefetch audio for all texts in the queue."""
     while True:
         await monitoring.wait()
+        text = await in_q.get()
+        is_fa = persian_match(text) is not None
+        voice = fa_voice if is_fa else en_voice
+        logger.info(f'Prefetching audio for: {text[:30]}...')
+        audio_q: Queue[bytes | None] = Queue()
+        await out_q.put((text, is_fa, audio_q))
+
         try:
-            text = await in_q.get()
-            is_fa = persian_match(text) is not None
-            voice = fa_voice if is_fa else en_voice
-            logger.info(f'Prefetching audio for: {text[:30]}...')
-            audio_q: Queue[bytes | None] = Queue()
-            await out_q.put((text, is_fa, audio_q))
-            try:
-                async for message in Communicate(text, voice).stream():
-                    if message['type'] == 'audio':
-                        await audio_q.put(message['data'])  # type: ignore
-                logger.info(f'Audio cached for: {text[:30]}...')
-            except Exception as e:
-                logger.error(
-                    f'Error prefetching audio for {text[:30]}...: {e!r}'
-                )
-            finally:
-                await audio_q.put(None)  # Sentinel for end of audio
-                in_q.task_done()
+            async for message in Communicate(text, voice).stream():
+                if message['type'] == 'audio':
+                    await audio_q.put(message['data'])  # type: ignore
+            logger.info(f'Audio cached for: {text[:30]}...')
         except Exception as e:
-            logger.error(f'Error in prefetch_audio: {e!r}')
+            logger.error(f'Error prefetching audio for {text[:30]}...: {e!r}')
+        finally:
+            await audio_q.put(None)  # Sentinel for end of audio
+            in_q.task_done()
+
         await sleep(0.1)  # Prevent tight loop
 
 
