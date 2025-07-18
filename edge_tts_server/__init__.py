@@ -126,16 +126,15 @@ async def _(request: Request) -> Response:
     return Response()
 
 
-websocket_connected = False
+ws: WebSocketResponse
 
 
 @routes.get('/ws')
 async def _(request):
-    global current_audio_q, websocket_connected
+    global current_audio_q, ws
     logger.info('New socket connection.')
     ws = WebSocketResponse()
     await ws.prepare(request)
-    websocket_connected = True
     while True:
         await monitoring.wait()
         text, is_fa, audio_q = await out_q.get()
@@ -147,7 +146,6 @@ async def _(request):
             await ws.send_json({'text': text, 'is_fa': is_fa})
         except Exception as e:
             logger.exception(f'WebSocket error: {e}')
-            websocket_connected = False
             await ws.close()
             return ws
         finally:
@@ -203,7 +201,7 @@ async def _(request: Request) -> StreamResponse:
 
 async def open_tab_if_no_conn():
     await sleep(5.0)
-    if websocket_connected is False:
+    if 'ws' not in globals():
         webbrowser.open('http://127.0.0.1:3775/reader.html')
 
 
