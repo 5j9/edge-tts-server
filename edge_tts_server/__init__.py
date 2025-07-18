@@ -101,7 +101,6 @@ async def listen_to_qt():
     try:
         while True:
             data = await to_thread(conn.recv)
-            logger.debug(data)
             if type(data) is bool:
                 logger.debug(f'qt toggled monitoring: {data}')
                 await ws.send_json(
