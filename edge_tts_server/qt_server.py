@@ -4,7 +4,7 @@ from multiprocessing.connection import PipeConnection
 from time import time
 
 from logging_ import logger
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QApplication,
@@ -155,14 +155,23 @@ def set_monitoring_state(
 
 def show_about_message():
     """
-    Displays an 'About' message box.
+    Displays an 'About' message box with a clickable link.
     """
     msg_box = QMessageBox()
     msg_box.setIcon(QMessageBox.Icon.Information)
     msg_box.setText('Clipboard Monitor Application')
-    msg_box.setInformativeText(
-        'Monitors clipboard changes and processes text.\n\nDeveloped with PyQt6.'
+
+    # Use HTML for the link
+    link_text = '<a href="https://github.com/5j9/edge-tts-server">GitHub Repository</a>'
+    informative_text = (
+        'Monitors clipboard changes and processes text.\n\nDeveloped with PyQt6.\n'
+        f'For more information, visit our {link_text}.'
     )
+    msg_box.setInformativeText(informative_text)
+
+    # Set the text format to RichText to enable HTML parsing
+    msg_box.setTextFormat(Qt.TextFormat.RichText)
+
     msg_box.setWindowTitle('About')
     msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
     msg_box.exec()
