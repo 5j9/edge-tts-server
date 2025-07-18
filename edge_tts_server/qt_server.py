@@ -2,9 +2,9 @@ import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
 from time import time
-from typing import Any
 
 from logging_ import logger
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QApplication,
@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 # Global flag to control monitoring state
-monitoring_paused = False
+monitoring = False
 
 qt_app = QApplication([])
 # Ensure the application continues to run even if there are no visible windows,
@@ -45,15 +45,15 @@ last_processed_time = 0.0
 DEBOUNCE_SECONDS = 0.1
 
 
-def on_clipboard_changed(qt_pipe: PipeConnection):
+def on_clipboard_changed():
     """
     Callback function triggered when clipboard content changes.
     Processes the text if monitoring is active and sends it via the pipe.
     """
-    global last_processed_time, monitoring_paused
+    global last_processed_time, monitoring
 
     # If monitoring is paused, do not process clipboard changes
-    if monitoring_paused:
+    if not monitoring:
         logger.info('Monitoring is paused. Skipping clipboard change event.')
         return
 
@@ -71,15 +71,40 @@ def on_clipboard_changed(qt_pipe: PipeConnection):
         return
 
     text = mime_data.text()
-    if skip(text) is True:
+    if skip(text):
         return
 
     logger.info(f'Received text: {text[:50]}...')  # Log a snippet for brevity
     # Send the processed text (URLs removed) through the pipe
-    qt_pipe.send(rm_urls(text))
+    conn.send(rm_urls(text))
 
 
-# --- Functions for controlling monitoring state via tray icon ---
+# --- Functions for controlling monitoring state via tray icon and pipe ---
+
+
+def _update_tray_ui(
+    tray_icon: QSystemTrayIcon,
+    pause_action: QAction,
+    resume_action: QAction,
+    style: QStyle,
+):
+    """
+    Updates the system tray icon and menu actions based on the global monitoring_paused state.
+    """
+    if monitoring:
+        pause_action.setEnabled(True)
+        resume_action.setEnabled(False)
+        tray_icon.setIcon(
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        )
+        tray_icon.setToolTip('Clipboard Monitor (Active)')
+    else:
+        pause_action.setEnabled(True)
+        resume_action.setEnabled(False)
+        tray_icon.setIcon(
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
+        )
+        tray_icon.setToolTip('Clipboard Monitor (Paused)')
 
 
 def toggle_monitoring(
@@ -90,39 +115,42 @@ def toggle_monitoring(
 ):
     """
     Toggles the monitoring state (pause/resume) and updates the tray icon's menu actions.
-    Also changes the tray icon to reflect the current state.
     """
-    global monitoring_paused
-    monitoring_paused = not monitoring_paused
+    global monitoring
+    monitoring = not monitoring
 
-    if monitoring_paused:
-        logger.info('Monitoring paused via tray icon.')
-        # tray_icon.showMessage(
-        #     'Clipboard Monitor',
-        #     'Monitoring is now PAUSED.',
-        #     QSystemTrayIcon.MessageIcon.Information,
-        #     2000,  # Message will disappear after 2 seconds
-        # )
-        pause_action.setEnabled(False)  # Disable pause option
-        resume_action.setEnabled(True)  # Enable resume option
-        tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
-        )  # Change icon to pause
-        tray_icon.setToolTip('Clipboard Monitor (Paused)')
-    else:
+    if monitoring:
+        conn.send(True)
         logger.info('Monitoring resumed via tray icon.')
-        # tray_icon.showMessage(
-        #     'Clipboard Monitor',
-        #     'Monitoring is now RESUMED.',
-        #     QSystemTrayIcon.MessageIcon.Information,
-        #     2000,
-        # )
-        pause_action.setEnabled(True)  # Enable pause option
-        resume_action.setEnabled(False)  # Disable resume option
-        tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
-        )  # Change icon to play
-        tray_icon.setToolTip('Clipboard Monitor (Active)')
+    else:
+        conn.send(False)
+        logger.info('Monitoring paused via tray icon.')
+
+    _update_tray_ui(tray_icon, pause_action, resume_action, style)
+
+
+def set_monitoring_state(
+    state: bool,
+    tray_icon: QSystemTrayIcon,
+    pause_action: QAction,
+    resume_action: QAction,
+    style: QStyle,
+):
+    """
+    Sets the monitoring state (True for active, False for paused) and updates the UI.
+    This function is called by the pipe listener.
+    """
+    global monitoring
+    if monitoring == state:  # No change needed if already in desired state
+        return
+
+    monitoring = state
+    if monitoring:
+        logger.info('Monitoring resumed via pipe message.')
+    else:
+        logger.info('Monitoring paused via pipe message.')
+
+    _update_tray_ui(tray_icon, pause_action, resume_action, style)
 
 
 def show_about_message():
@@ -140,10 +168,58 @@ def show_about_message():
     msg_box.exec()
 
 
-def run_qt_app(qt_pipe: PipeConnection):
+class PipeReaderThread(QThread):
     """
-    Initializes and runs the PyQt6 application, including the system tray icon.
+    A QThread subclass to read boolean messages from a multiprocessing PipeConnection
+    and emit them as a Qt signal.
     """
+
+    data_received = pyqtSignal(bool)  # Signal to emit boolean messages
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._running = True
+
+    def run(self):
+        """
+        Continuously reads from the pipe and emits data.
+        """
+        logger.info('PipeReaderThread started.')
+        while self._running:
+            try:
+                msg = conn.recv()
+                if type(msg) is bool:
+                    logger.info(f'PipeReaderThread received message: {msg}')
+                    self.data_received.emit(msg)
+                else:
+                    logger.warning(
+                        f'PipeReaderThread received non-boolean message from pipe: {msg}'
+                    )
+            except EOFError:
+                logger.info('Pipe closed, PipeReaderThread exiting.')
+                self._running = False
+            except Exception as e:
+                logger.error(f'Error in PipeReaderThread: {e}')
+            finally:
+                pass
+
+        logger.info('PipeReaderThread stopped.')
+
+    def stop(self):
+        """
+        Stops the thread's run loop.
+        """
+        self._running = False
+        self.wait()  # Wait for the thread to finish execution
+
+
+def run_qt_app(pipe: PipeConnection):
+    """
+    Initializes and runs the PyQt6 application, including the system tray icon
+    and a listener for control messages from the pipe.
+    """
+    global conn
+    conn = pipe
     # Create the system tray icon
     style = qt_app.style()
     assert style is not None
@@ -159,32 +235,27 @@ def run_qt_app(qt_pipe: PipeConnection):
 
     # Add "Pause Monitoring" action
     pause_action = QAction('Pause Monitoring', qt_app)
-    # Initially enabled because monitoring starts active
-    pause_action.triggered.connect(
-        partial(toggle_monitoring, tray_icon, pause_action, QAction(), style)
-    )  # QAction() is a placeholder, will be replaced below
-    tray_menu.addAction(pause_action)
-
     # Add "Resume Monitoring" action
     resume_action = QAction('Resume Monitoring', qt_app)
-    # Initially disabled because monitoring starts active
-    resume_action.setEnabled(False)
+
+    # Connect actions using partial to pass necessary UI elements
+    # These actions will toggle the state
+    pause_action.triggered.connect(
+        partial(
+            toggle_monitoring, tray_icon, pause_action, resume_action, style
+        )
+    )
     resume_action.triggered.connect(
         partial(
             toggle_monitoring, tray_icon, pause_action, resume_action, style
         )
     )
+
+    tray_menu.addAction(pause_action)
     tray_menu.addAction(resume_action)
 
-    # Update the partial for pause_action to include the actual resume_action and style
-    # This is a bit of a workaround because `resume_action` isn't fully defined
-    # when `pause_action` is created.
-    pause_action.triggered.disconnect()  # Disconnect the placeholder partial
-    pause_action.triggered.connect(
-        partial(
-            toggle_monitoring, tray_icon, pause_action, resume_action, style
-        )
-    )
+    # Initially update UI based on global monitoring_paused state (which is False by default)
+    _update_tray_ui(tray_icon, pause_action, resume_action, style)
 
     tray_menu.addSeparator()  # Add a separator line
 
@@ -212,9 +283,26 @@ def run_qt_app(qt_pipe: PipeConnection):
     )
 
     # Connect the clipboard dataChanged signal to your handler
-    clipboard.dataChanged.connect(
-        partial(on_clipboard_changed, qt_pipe=qt_pipe)
+    # This pipe sends data *from* the Qt app *to* the main process
+    clipboard.dataChanged.connect(partial(on_clipboard_changed))
+
+    # --- Control Pipe Listener Setup ---
+    # This pipe reads control messages *from* the main process *into* the Qt app
+    pipe_recv_thread = PipeReaderThread()
+    # Connect the thread's data_received signal to a slot that updates monitoring state
+    pipe_recv_thread.data_received.connect(
+        partial(
+            set_monitoring_state,
+            tray_icon=tray_icon,
+            pause_action=pause_action,
+            resume_action=resume_action,
+            style=style,
+        )
     )
+    pipe_recv_thread.start()  # Start the thread
+
+    # Ensure the pipe_thread is stopped when the application quits
+    qt_app.aboutToQuit.connect(pipe_recv_thread.stop)
 
     # Start the Qt application event loop
     qt_app.exec()
@@ -223,17 +311,67 @@ def run_qt_app(qt_pipe: PipeConnection):
 if __name__ == '__main__':
     # This block is for testing the tray icon functionality independently.
     # In your actual multiprocessing setup, `run_qt_app` will be called
-    # in a separate process with a PipeConnection.
-    # For a standalone test, we create a dummy PipeConnection.
+    # in a separate process with two PipeConnections.
+    # For a standalone test, we create two dummy PipeConnection pairs.
 
-    class DummyPipeConnection:
-        def send(self, data):
-            print(f"Dummy Pipe: Sent '{data[:50]}...'")
+    import threading
+    import time
+    from multiprocessing import Pipe
 
-    dummy_pipe_con: Any = DummyPipeConnection()
+    aio_conn, conn = Pipe()
 
     print(
         'Running Qt application with tray icon. Look for the icon in your system tray.'
     )
     print('Right-click the icon to see options.')
-    run_qt_app(dummy_pipe_con)
+    print('Simulating control messages being sent to the Qt app...')
+
+    # Simulate sending control messages from the "main process" side
+    def simulate_control_messages():
+        print('\nSimulating control messages (True/False) to Qt app...')
+        # Send False after 3 seconds (pause monitoring)
+        aio_conn.send(False)
+        print('Sent False to control pipe (pause monitoring)')
+        time.sleep(3)
+
+        # Send True after 3 more seconds (resume monitoring)
+        aio_conn.send(True)
+        print('Sent True to control pipe (resume monitoring)')
+        time.sleep(3)
+
+        # Send False again after 3 more seconds
+        aio_conn.send(False)
+        print('Sent False to control pipe (pause monitoring)')
+        time.sleep(3)
+
+        # Send True again after 3 more seconds
+        aio_conn.send(True)
+        print('Sent True to control pipe (resume monitoring)')
+        time.sleep(3)
+
+        # Close the control pipe to signal end of messages
+        aio_conn.close()
+
+    # This part would typically be in the *other* process that communicates with the Qt app.
+    # For this standalone test, we run it in a separate thread to avoid blocking the Qt event loop.
+    control_sim_thread = threading.Thread(target=simulate_control_messages)
+    control_sim_thread.daemon = (
+        True  # Allow thread to exit when main program exits
+    )
+    control_sim_thread.start()
+
+    # Start the Qt application
+    # Pass the appropriate ends of the pipes to run_qt_app
+    run_qt_app(conn)
+
+    # After qt_app.exec() finishes (when the app quits), clean up pipes
+    conn.close()
+
+    # In a real multiprocessing scenario, the main process would read from
+    # main_clipboard_recv_pipe here if it needed to process clipboard data.
+    # For this test, we just ensure it's closed.
+    aio_conn.close()
+    control_sim_thread.join(
+        timeout=1
+    )  # Give the simulation thread a chance to finish
+    print('Qt application exited.')

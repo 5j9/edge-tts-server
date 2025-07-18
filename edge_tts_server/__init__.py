@@ -10,7 +10,6 @@ from asyncio import (
     to_thread,
 )
 from multiprocessing import Pipe, Process
-from multiprocessing.connection import PipeConnection
 from pathlib import Path
 from re import compile as rc
 
@@ -50,9 +49,6 @@ async def set_voice_names():
 
 all_origins = {'Access-Control-Allow-Origin': '*'}
 
-# This event will be cleared when back-end gets deactivated.
-monitoring = Event()
-
 # Queue to store incoming clipboard texts
 in_q: Queue[str] = Queue(maxsize=50)
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
@@ -61,11 +57,9 @@ out_q: Queue[tuple[str, bool, Queue[bytes | None]]] = Queue(maxsize=5)
 
 @routes.put('/monitoring')
 async def _(request: Request) -> Response:
+    logger.debug('/monitoring recieved request')
     new_state = await request.json()
-    if new_state is True:
-        monitoring.set()
-    else:
-        monitoring.clear()
+    conn.send(new_state)
     logger.info(f'monitoring state: {new_state}')
     return Response()
 
@@ -81,7 +75,6 @@ monitor_clipboard_args = [
 async def prefetch_audio():
     """Prefetch audio for all texts in the queue."""
     while True:
-        await monitoring.wait()
         text = await in_q.get()
         is_fa = persian_match(text) is not None
         voice = fa_voice if is_fa else en_voice
@@ -103,19 +96,28 @@ async def prefetch_audio():
         await sleep(0.1)  # Prevent tight loop
 
 
-async def clipboard_monitor(aio_pipe: PipeConnection):
+async def listen_to_qt():
     """Monitor clipboard and add texts to queue."""
-    while True:
-        try:
-            text = (await to_thread(aio_pipe.recv)).strip()
-            if not monitoring.is_set():
-                continue
-            if text:
-                await in_q.put(text)
-                logger.info(f'Added to queue: {text[:30]}...')
-        except Exception as e:
-            logger.exception(f'Error in clipboard monitor: {e}')
-        await sleep(0.1)
+    try:
+        while True:
+            data = await to_thread(conn.recv)
+            logger.debug(data)
+            if type(data) is bool:
+                logger.debug(f'qt toggled monitoring: {data}')
+                await ws.send_json(
+                    {'action': 'toggle-monitoring', 'state': data}
+                )
+            elif type(data) is str:
+                data = data.strip()
+                await in_q.put(data)
+                logger.info(f'Added to queue: {data[:30]!r}...')
+            else:
+                logger.error(
+                    f'Enexpected data type recieved on aio_rx {data=}'
+                )
+            await sleep(0.1)
+    except Exception:
+        logger.critical('listen_to_qt loop failed')
 
 
 next_request = Event()
@@ -137,14 +139,15 @@ async def _(request):
     ws = WebSocketResponse()
     await ws.prepare(request)
     while True:
-        await monitoring.wait()
         text, is_fa, audio_q = await out_q.get()
         logger.info('Sending new clipboard text to front-end.')
         # Store audio_q in request.app for /audio endpoint
         current_audio_q = audio_q
         next_request.clear()
         try:
-            await ws.send_json({'text': text, 'is_fa': is_fa})
+            await ws.send_json(
+                {'action': 'new-text', 'text': text, 'is_fa': is_fa}
+            )
         except Exception as e:
             logger.exception(f'WebSocket error: {e}')
             await ws.close()
@@ -214,10 +217,10 @@ if __name__ == '__main__':
     create_task = loop.create_task
     # loop.create_task(set_voice_names())
 
-    qt_pipe, aio_pipe = Pipe(True)
-    qt_process = Process(target=run_qt_app, args=(qt_pipe,))
+    qt_conn, conn = Pipe(True)
+    qt_process = Process(target=run_qt_app, args=(qt_conn,))
     qt_process.start()
-    clipboard_monitor_task = create_task(clipboard_monitor(aio_pipe))
+    listen_to_qt_task = create_task(listen_to_qt())
     prefetch_audio_task = create_task(prefetch_audio())
     open_tab_task = create_task(open_tab_if_no_conn())
 

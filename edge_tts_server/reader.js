@@ -68,12 +68,13 @@ async function play() {
 var monitoring = false;
 /** @type {HTMLElement} */
 // @ts-ignore
-var backToggle = document.getElementById('toggle-monitoring');
+var toggleButton = document.getElementById('toggle-monitoring');
 async function toggleMonitoring() {
 	monitoring = !monitoring;
-	var r = await fetch(home + 'monitoring', { method: 'put', body: monitoring });
-	backToggle.textContent = monitoring ? 'ON' : 'OFF';
+	var r = await fetch(home + 'monitoring', { method: 'PUT', body: JSON.stringify(monitoring) });
+	toggleButton.textContent = monitoring ? 'ON' : 'OFF';
 }
+toggleButton.onclick = toggleMonitoring;
 
 
 var ws;
@@ -97,15 +98,23 @@ function startWs() {
 
 	ws.onerror = ws.onclose = onCloseOrError;
 	ws.onopen = () => { // sync up the monitoring state with server
-		fetch(home + 'monitoring', { method: 'PUT', body: monitoring });
+		fetch(home + 'monitoring', { method: 'PUT', body: JSON.stringify(monitoring) });
 	}
 	ws.onmessage = (e) => {
 		var j = JSON.parse(e.data);
-		var text = j['text']
-		editableField.dir = j['is_fa'] ? 'rtl' : 'ltr';
-		editableField.textContent = text;
-		nextButton.disabled = false;
-		play();
+		switch (j['action']) {
+			case 'toggle-monitoring':
+				monitoring = j['state'];
+				toggleButton.textContent = monitoring ? 'ON' : 'OFF';
+				break;
+			case 'new-text':
+				var text = j['text'];
+				editableField.dir = j['is_fa'] ? 'rtl' : 'ltr';
+				editableField.textContent = text;
+				nextButton.disabled = false;
+				play();
+				break;
+		}
 	}
 
 }
