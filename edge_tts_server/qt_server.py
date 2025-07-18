@@ -45,7 +45,7 @@ last_processed_time = 0.0
 DEBOUNCE_SECONDS = 0.1
 
 
-def on_clipboard_changed(cb_master: PipeConnection):
+def on_clipboard_changed(qt_pipe: PipeConnection):
     """
     Callback function triggered when clipboard content changes.
     Processes the text if monitoring is active and sends it via the pipe.
@@ -76,7 +76,7 @@ def on_clipboard_changed(cb_master: PipeConnection):
 
     logger.info(f'Received text: {text[:50]}...')  # Log a snippet for brevity
     # Send the processed text (URLs removed) through the pipe
-    cb_master.send(rm_urls(text))
+    qt_pipe.send(rm_urls(text))
 
 
 # --- Functions for controlling monitoring state via tray icon ---
@@ -140,7 +140,7 @@ def show_about_message():
     msg_box.exec()
 
 
-def run_qt_app(cb_master: PipeConnection):
+def run_qt_app(qt_pipe: PipeConnection):
     """
     Initializes and runs the PyQt6 application, including the system tray icon.
     """
@@ -213,7 +213,7 @@ def run_qt_app(cb_master: PipeConnection):
 
     # Connect the clipboard dataChanged signal to your handler
     clipboard.dataChanged.connect(
-        partial(on_clipboard_changed, cb_master=cb_master)
+        partial(on_clipboard_changed, qt_pipe=qt_pipe)
     )
 
     # Start the Qt application event loop

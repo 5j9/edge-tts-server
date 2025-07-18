@@ -10,6 +10,7 @@ from asyncio import (
     to_thread,
 )
 from multiprocessing import Pipe, Process
+from multiprocessing.connection import PipeConnection
 from pathlib import Path
 from re import compile as rc
 
@@ -25,7 +26,7 @@ from aiohttp.web import (
 from edge_tts import Communicate, VoicesManager
 from logging_ import logger
 
-from edge_tts_server.monitor_clipboard import run_qt_app
+from edge_tts_server.qt_server import run_qt_app
 
 routes = RouteTableDef()
 
@@ -102,11 +103,11 @@ async def prefetch_audio():
         await sleep(0.1)  # Prevent tight loop
 
 
-async def clipboard_monitor(cb_slave):
+async def clipboard_monitor(aio_pipe: PipeConnection):
     """Monitor clipboard and add texts to queue."""
     while True:
         try:
-            text = (await to_thread(cb_slave.recv)).strip()
+            text = (await to_thread(aio_pipe.recv)).strip()
             if not monitoring.is_set():
                 continue
             if text:
@@ -213,10 +214,10 @@ if __name__ == '__main__':
     create_task = loop.create_task
     # loop.create_task(set_voice_names())
 
-    cb_master, cb_slave = Pipe(True)
-    qt_process = Process(target=run_qt_app, args=(cb_master,))
+    qt_pipe, aio_pipe = Pipe(True)
+    qt_process = Process(target=run_qt_app, args=(qt_pipe,))
     qt_process.start()
-    clipboard_monitor_task = create_task(clipboard_monitor(cb_slave))
+    clipboard_monitor_task = create_task(clipboard_monitor(aio_pipe))
     prefetch_audio_task = create_task(prefetch_audio())
     open_tab_task = create_task(open_tab_if_no_conn())
 
