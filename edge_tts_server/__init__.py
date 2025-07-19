@@ -93,8 +93,6 @@ async def prefetch_audio():
             await audio_q.put(None)  # Sentinel for end of audio
             in_q.task_done()
 
-        await sleep(0.1)  # Prevent tight loop
-
 
 async def listen_to_qt():
     """Monitor clipboard and add texts to queue."""
@@ -114,7 +112,6 @@ async def listen_to_qt():
                 logger.error(
                     f'Enexpected data type recieved on aio_rx {data=}'
                 )
-            await sleep(0.1)
     except Exception:
         logger.critical('listen_to_qt loop failed')
 
