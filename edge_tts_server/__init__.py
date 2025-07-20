@@ -96,24 +96,28 @@ async def prefetch_audio():
 
 async def listen_to_qt():
     """Monitor clipboard and add texts to queue."""
-    try:
-        while True:
+    while True:
+        try:
             data = await to_thread(conn.recv)
+
             if type(data) is bool:
                 logger.debug(f'qt toggled monitoring: {data}')
-                await ws.send_json(
+                if current_ws is None:
+                    continue
+                await current_ws.send_json(
                     {'action': 'toggle-monitoring', 'state': data}
                 )
-            elif type(data) is str:
+                continue
+
+            if type(data) is str:
                 data = data.strip()
                 await in_q.put(data)
                 logger.info(f'Added to queue: {data[:30]!r}...')
-            else:
-                logger.error(
-                    f'Enexpected data type recieved on aio_rx {data=}'
-                )
-    except Exception:
-        logger.critical('listen_to_qt loop failed')
+                continue
+
+            logger.error(f'Unexpected data type recieved from conn: {data=}')
+        except Exception as e:
+            logger.error(f'listen_to_qt loop failed with {e!r}')
 
 
 next_request = Event()
@@ -125,15 +129,22 @@ async def _(request: Request) -> Response:
     return Response()
 
 
-ws: WebSocketResponse
+current_ws: WebSocketResponse | None = None
 
 
 @routes.get('/ws')
 async def _(request):
-    global current_audio_q, ws
-    logger.info('New socket connection.')
+    global current_audio_q, current_ws
+    logger.info('new websocket connection')
+
     ws = WebSocketResponse()
     await ws.prepare(request)
+    if current_ws and not current_ws.closed:
+        logger.debug('closing current_ws before using new one')
+        await current_ws.close()
+
+    current_ws = ws
+
     while True:
         text, is_fa, audio_q = await out_q.get()
         logger.info('Sending new clipboard text to front-end.')
@@ -150,7 +161,9 @@ async def _(request):
             return ws
         finally:
             out_q.task_done()
+        logger.debug('awaiting next_request')
         await next_request.wait()
+        logger.debug('next_request set')
 
 
 audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
@@ -201,7 +214,7 @@ async def _(request: Request) -> StreamResponse:
 
 async def open_tab_if_no_conn():
     await sleep(5.0)
-    if 'ws' not in globals():
+    if current_ws is None:
         webbrowser.open('http://127.0.0.1:3775/reader.html')
 
 
