@@ -87,11 +87,11 @@ function onCloseOrError(e) {
 }
 
 function startWs() {
-	console.log('new websocket')
+	console.log('new websocket');
 	try {
 		ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
 	} catch {
-		console.log('new WebSocket failed.')
+		console.log('new WebSocket failed.');
 		onCloseOrError();
 		return;
 	}
