@@ -90,7 +90,7 @@ def _update_tray_ui(
         pause_action.setEnabled(True)
         resume_action.setEnabled(False)
         tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         )
         tray_icon.setToolTip('Clipboard Monitor (Active)')
 
@@ -99,7 +99,7 @@ def _update_tray_ui(
         pause_action.setEnabled(False)
         resume_action.setEnabled(True)
         tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
         )
         tray_icon.setToolTip('Clipboard Monitor (Paused)')
 
