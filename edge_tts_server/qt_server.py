@@ -14,9 +14,6 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon,
 )
 
-# Global flag to control monitoring state
-monitoring = False
-
 qt_app = QApplication([])
 # Ensure the application continues to run even if there are no visible windows,
 # which is necessary for the system tray icon to persist.
@@ -50,12 +47,7 @@ def on_clipboard_changed():
     Callback function triggered when clipboard content changes.
     Processes the text if monitoring is active and sends it via the pipe.
     """
-    global last_processed_time, monitoring
-
-    # If monitoring is paused, do not process clipboard changes
-    if not monitoring:
-        logger.info('Monitoring is paused. Skipping clipboard change event.')
-        return
+    global last_processed_time
 
     current_time = time()
     # Debounce mechanism to prevent rapid, duplicate processing
@@ -79,35 +71,46 @@ def on_clipboard_changed():
     conn.send(rm_urls(text))
 
 
+partial_on_clipboard_changed = partial(on_clipboard_changed)
+
 # --- Functions for controlling monitoring state via tray icon and pipe ---
 
 
 def _update_tray_ui(
+    activate: bool,
     tray_icon: QSystemTrayIcon,
     pause_action: QAction,
     resume_action: QAction,
     style: QStyle,
 ):
     """
-    Updates the system tray icon and menu actions based on the global monitoring_paused state.
+    Updates the system tray icon and menu actions.
     """
-    if monitoring:
-        pause_action.setEnabled(True)
-        resume_action.setEnabled(False)
-        tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
-        )
-        tray_icon.setToolTip('Clipboard Monitor (Active)')
-    else:
+    if activate:
         pause_action.setEnabled(True)
         resume_action.setEnabled(False)
         tray_icon.setIcon(
             style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
         )
+        tray_icon.setToolTip('Clipboard Monitor (Active)')
+
+        clipboard.dataChanged.connect(partial_on_clipboard_changed)
+    else:
+        pause_action.setEnabled(False)
+        resume_action.setEnabled(True)
+        tray_icon.setIcon(
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        )
         tray_icon.setToolTip('Clipboard Monitor (Paused)')
 
+        try:
+            clipboard.dataChanged.disconnect(partial_on_clipboard_changed)
+        except TypeError:
+            # dataChanged is not connected yet the first time app starts
+            pass
 
-def toggle_monitoring(
+
+def handle_tray_click(
     tray_icon: QSystemTrayIcon,
     pause_action: QAction,
     resume_action: QAction,
@@ -116,21 +119,19 @@ def toggle_monitoring(
     """
     Toggles the monitoring state (pause/resume) and updates the tray icon's menu actions.
     """
-    global monitoring
-    monitoring = not monitoring
-
-    if monitoring:
+    is_paused = resume_action.isEnabled()
+    if is_paused:
         conn.send(True)
         logger.info('Monitoring resumed via tray icon.')
     else:
         conn.send(False)
         logger.info('Monitoring paused via tray icon.')
 
-    _update_tray_ui(tray_icon, pause_action, resume_action, style)
+    _update_tray_ui(is_paused, tray_icon, pause_action, resume_action, style)
 
 
-def set_monitoring_state(
-    state: bool,
+def handle_pipe_recv(
+    monitoring: bool,
     tray_icon: QSystemTrayIcon,
     pause_action: QAction,
     resume_action: QAction,
@@ -140,17 +141,12 @@ def set_monitoring_state(
     Sets the monitoring state (True for active, False for paused) and updates the UI.
     This function is called by the pipe listener.
     """
-    global monitoring
-    if monitoring == state:  # No change needed if already in desired state
-        return
-
-    monitoring = state
     if monitoring:
         logger.info('Monitoring resumed via pipe message.')
     else:
         logger.info('Monitoring paused via pipe message.')
 
-    _update_tray_ui(tray_icon, pause_action, resume_action, style)
+    _update_tray_ui(monitoring, tray_icon, pause_action, resume_action, style)
 
 
 def show_about_message():
@@ -251,12 +247,20 @@ def run_qt_app(pipe: PipeConnection):
     # These actions will toggle the state
     pause_action.triggered.connect(
         partial(
-            toggle_monitoring, tray_icon, pause_action, resume_action, style
+            handle_tray_click,
+            tray_icon,
+            pause_action,
+            resume_action,
+            style,
         )
     )
     resume_action.triggered.connect(
         partial(
-            toggle_monitoring, tray_icon, pause_action, resume_action, style
+            handle_tray_click,
+            tray_icon,
+            pause_action,
+            resume_action,
+            style,
         )
     )
 
@@ -264,7 +268,7 @@ def run_qt_app(pipe: PipeConnection):
     tray_menu.addAction(resume_action)
 
     # Initially update UI based on global monitoring_paused state (which is False by default)
-    _update_tray_ui(tray_icon, pause_action, resume_action, style)
+    _update_tray_ui(False, tray_icon, pause_action, resume_action, style)
 
     tray_menu.addSeparator()  # Add a separator line
 
@@ -284,16 +288,12 @@ def run_qt_app(pipe: PipeConnection):
     # Connect the activated signal of the tray icon to toggle_monitoring
     # This will trigger toggle_monitoring when the icon is clicked (left-click by default)
     tray_icon.activated.connect(
-        lambda reason: toggle_monitoring(
+        lambda reason: handle_tray_click(
             tray_icon, pause_action, resume_action, style
         )
         if reason == QSystemTrayIcon.ActivationReason.Trigger
         else None
     )
-
-    # Connect the clipboard dataChanged signal to your handler
-    # This pipe sends data *from* the Qt app *to* the main process
-    clipboard.dataChanged.connect(partial(on_clipboard_changed))
 
     # --- Control Pipe Listener Setup ---
     # This pipe reads control messages *from* the main process *into* the Qt app
@@ -301,7 +301,7 @@ def run_qt_app(pipe: PipeConnection):
     # Connect the thread's data_received signal to a slot that updates monitoring state
     pipe_recv_thread.data_received.connect(
         partial(
-            set_monitoring_state,
+            handle_pipe_recv,
             tray_icon=tray_icon,
             pause_action=pause_action,
             resume_action=resume_action,
