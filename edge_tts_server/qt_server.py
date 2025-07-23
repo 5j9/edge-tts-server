@@ -76,8 +76,7 @@ partial_on_clipboard_changed = partial(on_clipboard_changed)
 # --- Functions for controlling monitoring state via tray icon and pipe ---
 
 
-def _update_tray_ui(
-    activate: bool,
+def _toggle_tray_ui(
     tray_icon: QSystemTrayIcon,
     pause_action: QAction,
     resume_action: QAction,
@@ -86,28 +85,26 @@ def _update_tray_ui(
     """
     Updates the system tray icon and menu actions.
     """
-    if activate:
-        pause_action.setEnabled(True)
-        resume_action.setEnabled(False)
-        tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
-        )
-        tray_icon.setToolTip('Clipboard Monitor (Active)')
-
-        clipboard.dataChanged.connect(partial_on_clipboard_changed)
-    else:
+    if pause_action.isEnabled():  # the deafult for actions is enabled
         pause_action.setEnabled(False)
         resume_action.setEnabled(True)
         tray_icon.setIcon(
             style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
         )
         tray_icon.setToolTip('Clipboard Monitor (Paused)')
-
         try:
             clipboard.dataChanged.disconnect(partial_on_clipboard_changed)
         except TypeError:
             # dataChanged is not connected yet the first time app starts
             pass
+    else:
+        pause_action.setEnabled(True)
+        resume_action.setEnabled(False)
+        tray_icon.setIcon(
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        )
+        tray_icon.setToolTip('Clipboard Monitor (Active)')
+        clipboard.dataChanged.connect(partial_on_clipboard_changed)
 
 
 def handle_tray_click(
@@ -119,15 +116,14 @@ def handle_tray_click(
     """
     Toggles the monitoring state (pause/resume) and updates the tray icon's menu actions.
     """
-    is_paused = resume_action.isEnabled()
-    if is_paused:
-        conn.send(True)
-        logger.info('Monitoring resumed via tray icon.')
-    else:
+    if pause_action.isEnabled():
         conn.send(False)
         logger.info('Monitoring paused via tray icon.')
+    else:
+        conn.send(True)
+        logger.info('Monitoring resumed via tray icon.')
 
-    _update_tray_ui(is_paused, tray_icon, pause_action, resume_action, style)
+    _toggle_tray_ui(tray_icon, pause_action, resume_action, style)
 
 
 def handle_pipe_recv(
@@ -146,7 +142,8 @@ def handle_pipe_recv(
     else:
         logger.info('Monitoring paused via pipe message.')
 
-    _update_tray_ui(monitoring, tray_icon, pause_action, resume_action, style)
+    if pause_action.isEnabled() != monitoring:
+        _toggle_tray_ui(tray_icon, pause_action, resume_action, style)
 
 
 def show_about_message():
@@ -268,7 +265,7 @@ def run_qt_app(pipe: PipeConnection):
     tray_menu.addAction(resume_action)
 
     # Initially update UI based on global monitoring_paused state (which is False by default)
-    _update_tray_ui(False, tray_icon, pause_action, resume_action, style)
+    _toggle_tray_ui(tray_icon, pause_action, resume_action, style)
 
     tray_menu.addSeparator()  # Add a separator line
 
