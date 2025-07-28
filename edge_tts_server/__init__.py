@@ -78,17 +78,20 @@ async def prefetch_audio():
         text = await in_q.get()
         is_fa = persian_match(text) is not None
         voice = fa_voice if is_fa else en_voice
-        logger.info(f'Prefetching audio for: {text[:30]}...')
+        short_text = text[:20] + '...'
         audio_q: Queue[bytes | None] = Queue()
+        logger.info(
+            f'Prefetching audio for: {short_text} {out_q.qsize()}/{out_q.maxsize}'
+        )
         await out_q.put((text, is_fa, audio_q))
 
         try:
             async for message in Communicate(text, voice).stream():
                 if message['type'] == 'audio':
                     await audio_q.put(message['data'])  # type: ignore
-            logger.info(f'Audio cached for: {text[:30]}...')
+            logger.info(f'Audio cached for: {short_text}')
         except Exception as e:
-            logger.error(f'Error prefetching audio for {text[:30]}...: {e!r}')
+            logger.error(f'Error prefetching audio for {short_text}: {e!r}')
         finally:
             await audio_q.put(None)  # Sentinel for end of audio
             in_q.task_done()
@@ -111,8 +114,10 @@ async def listen_to_qt():
 
             if type(data) is str:
                 data = data.strip()
+                logger.info(
+                    f'Adding to in_q: {data[:20]!r}... {in_q.qsize()}/{in_q.maxsize}'
+                )
                 await in_q.put(data)
-                logger.info(f'Added to queue: {data[:30]!r}...')
                 continue
 
             logger.error(f'Unexpected data type recieved from conn: {data=}')
