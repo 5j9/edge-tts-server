@@ -93,8 +93,6 @@ async def prefetch_audio():
             await audio_q.put(None)  # Sentinel for end of audio
         except Exception as e:
             logger.error(f'Error prefetching audio for {short_text}: {e!r}')
-            # the front-end cannot detect end-of-audio in this situation and won't go next
-            await audio_q.put(NotImplemented)  # Sentinel for skip to next
         finally:
             in_q.task_done()
 
@@ -210,12 +208,6 @@ async def _(request: Request) -> StreamResponse:
         while True:
             data = await audio_q.get()
             if data is None:  # Sentinel for end of audio
-                break
-            if data is NotImplemented:
-                # front-end fails to detect EOF in this situation,
-                # manually trigger next
-                logger.debug('reached NotImplemented in audio_q -> next')
-                next_request.set()
                 break
             await response.write(data)
             audio_q.task_done()

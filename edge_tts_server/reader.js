@@ -3,9 +3,17 @@ const home = `http://127.0.0.1:${port}/`
 
 // @ts-check
 var audio = new Audio();
-audio.onended = () => {
+
+function requestNextStream(e) {
+	if (e.type != 'ended') {
+		console.log(e);
+	}
 	fetch(home + 'next');
-};
+}
+audio.onended = requestNextStream;
+audio.onstalled = requestNextStream;
+audio.onerror = requestNextStream;
+
 /**@type{HTMLLinkElement} */
 // @ts-ignore
 var favicon = document.createElement('link');
