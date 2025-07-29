@@ -86,7 +86,9 @@ async def prefetch_audio():
         await out_q.put((text, is_fa, audio_q))
 
         try:
-            async for message in Communicate(text, voice).stream():
+            async for message in Communicate(
+                text, voice, connect_timeout=5, receive_timeout=5
+            ).stream():
                 if message['type'] == 'audio':
                     await audio_q.put(message['data'])  # type: ignore
             logger.info(f'Audio cached for: {short_text}')
