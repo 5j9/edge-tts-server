@@ -89,7 +89,7 @@ def _toggle_tray_ui(
         pause_action.setEnabled(False)
         resume_action.setEnabled(True)
         tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_TitleBarMaxButton)
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         )
         tray_icon.setToolTip('Clipboard Monitor (Paused)')
         try:
@@ -101,7 +101,7 @@ def _toggle_tray_ui(
         pause_action.setEnabled(True)
         resume_action.setEnabled(False)
         tray_icon.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_TitleBarMinButton)
+            style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
         )
         tray_icon.setToolTip('Clipboard Monitor (Active)')
         clipboard.dataChanged.connect(partial_on_clipboard_changed)
@@ -227,7 +227,7 @@ def run_qt_app(pipe: PipeConnection):
     assert style is not None
     # Set initial icon to SP_MediaPause as monitoring starts active
     tray_icon = QSystemTrayIcon(
-        style.standardIcon(QStyle.StandardPixmap.SP_TitleBarMinButton), qt_app
+        style.standardIcon(QStyle.StandardPixmap.SP_MediaPause), qt_app
     )
     tray_icon.setToolTip('Clipboard Monitor (Active)')  # Initial tooltip
     tray_icon.setVisible(True)
