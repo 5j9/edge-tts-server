@@ -33,12 +33,12 @@ const pausePlayButton = document.getElementById('pauseOrPlay');
 async function pauseOrPlay() {
 	if (!audio.paused) {
 		audio.pause();
-		pausePlayButton.textContent = '⏸';
+		pausePlayButton.textContent = '▶';
 		return;
 	}
 
 	audio.play();
-	pausePlayButton.textContent = '▶';
+	pausePlayButton.textContent = '⏸';
 }
 
 function jumpBackward() {
@@ -52,7 +52,7 @@ function jumpForward() {
 function stop() {
 	audio.pause();
 	audio.currentTime = 0;
-	pausePlayButton.textContent = '⏸';
+	pausePlayButton.textContent = '▶';
 }
 
 /**@type{HTMLButtonElement} */
