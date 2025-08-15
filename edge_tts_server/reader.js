@@ -80,7 +80,7 @@ var toggleButton = document.getElementById('toggle-monitoring');
 async function toggleMonitoring() {
 	monitoring = !monitoring;
 	var r = await fetch(home + 'monitoring', { method: 'PUT', body: JSON.stringify(monitoring) });
-	toggleButton.textContent = monitoring ? 'ON' : 'OFF';
+	toggleButton.textContent = monitoring ? '⏽' : '⭘';
 }
 toggleButton.onclick = toggleMonitoring;
 
@@ -113,7 +113,7 @@ function startWs() {
 		switch (j['action']) {
 			case 'toggle-monitoring':
 				monitoring = j['state'];
-				toggleButton.textContent = monitoring ? 'ON' : 'OFF';
+				toggleButton.textContent = monitoring ? '⏽' : '⭘';
 				break;
 			case 'new-text':
 				var text = j['text'];
