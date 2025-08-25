@@ -5,6 +5,7 @@ import webbrowser
 from asyncio import (
     Event,
     Queue,
+    QueueShutDown,
     new_event_loop,
     sleep,
     to_thread,
@@ -93,6 +94,8 @@ async def prefetch_audio():
                     await audio_q.put(message['data'])  # type: ignore
             logger.info(f'Audio cached for: {short_text}')
             await audio_q.put(None)  # Sentinel for end of audio
+        except QueueShutDown:
+            logger.debug(f'audio_q QueueShutDown for {short_text}')
         except Exception as e:
             logger.error(f'Error prefetching audio for {short_text}: {e!r}')
         finally:
@@ -132,6 +135,7 @@ next_request = Event()
 
 @routes.get('/next')
 async def _(request: Request) -> Response:
+    current_audio_q.shutdown()
     next_request.set()
     return Response()
 
