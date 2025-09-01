@@ -11,7 +11,8 @@ function requestNextStream(e) {
 	fetch(home + 'next');
 }
 audio.onended = requestNextStream;
-audio.onstalled = requestNextStream;
+// stall may be tirggered at the very start which is due to MS TTS server delay
+// audio.onstalled = requestNextStream;
 audio.onerror = requestNextStream;
 
 /**@type{HTMLLinkElement} */
