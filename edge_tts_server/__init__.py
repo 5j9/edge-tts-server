@@ -89,7 +89,8 @@ async def stream_audio_to_q(
 
             first_chunk = False
 
-        # Now stream the raw audio bytes
+        # `await audio_q.put` does not yield control unless audio_q is full
+        await sleep(0)
         await audio_q.put(chunk.audio_int16_bytes)
 
     await audio_q.put(None)  # Sentinel for end of audio
