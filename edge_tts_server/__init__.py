@@ -121,16 +121,16 @@ async def prefetch_audio():
         text = await in_q.get()
         is_fa = persian_match(text) is not None
         voice = fa_voice if is_fa else en_voice
-        short_text = text[:20] + '...'
+        short_text = repr(text[:20] + '...')
         audio_q: Queue[bytes | None] = Queue()
-        logger.info(
-            f'Prefetching audio for: {short_text} {out_q.qsize()}/{out_q.maxsize}'
+        logger.debug(
+            f'Caching audio for {short_text} {out_q.qsize()}/{out_q.maxsize}'
         )
         await out_q.put((text, is_fa, audio_q))
 
         try:
             await stream_audio_to_q(voice.synthesize(text), audio_q)
-            logger.info(f'Audio cached for: {short_text}')
+            logger.debug(f'Audio cached for {short_text}')
         except QueueShutDown:
             logger.debug(f'audio_q QueueShutDown for {short_text}')
         except Exception as e:
