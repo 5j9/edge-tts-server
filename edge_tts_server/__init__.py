@@ -92,6 +92,7 @@ async def stream_audio_to_q(
         # Now stream the raw audio bytes
         await audio_q.put(chunk.audio_int16_bytes)
 
+    await audio_q.put(None)  # Sentinel for end of audio
     # Note: If the receiving end needs the final size, it must be updated
     # after the stream ends. For a live stream, this is often not possible
     # and the receiving player must be tolerant of an empty or incorrect
@@ -129,7 +130,6 @@ async def prefetch_audio():
         try:
             await stream_audio_to_q(voice.synthesize(text), audio_q)
             logger.info(f'Audio cached for: {short_text}')
-            await audio_q.put(None)  # Sentinel for end of audio
         except QueueShutDown:
             logger.debug(f'audio_q QueueShutDown for {short_text}')
         except Exception as e:
