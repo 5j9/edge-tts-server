@@ -1,6 +1,7 @@
 __version__ = '0.1.dev0'
 
 import sys
+import wave
 import webbrowser
 from asyncio import (
     Event,
@@ -10,6 +11,7 @@ from asyncio import (
     sleep,
     to_thread,
 )
+from io import BytesIO
 from multiprocessing import Pipe, Process
 from pathlib import Path
 from re import compile as rc
@@ -23,8 +25,8 @@ from aiohttp.web import (
     WebSocketResponse,
     run_app,
 )
-from edge_tts import Communicate, VoicesManager
 from logging_ import logger
+from piper import PiperVoice
 
 from edge_tts_server.qt_server import run_qt_app
 
@@ -32,20 +34,20 @@ routes = RouteTableDef()
 
 persian_match = rc('[\u0600-\u06ff]').search
 
-# See set_voice_names for how to retrieve and search available voices
-fa_voice: str = (
-    'Microsoft Server Speech Text to Speech Voice (fa-IR, FaridNeural)'
-)
-en_voice: str = (
-    'Microsoft Server Speech Text to Speech Voice (en-US, AvaNeural)'
-)
+THIS_DIR = Path(__file__).parent
 
+en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')
+fa_voice = PiperVoice.load(THIS_DIR / 'voices/fa_IR-gyro-medium.onnx')
 
-async def set_voice_names():
-    global fa_voice, en_voice
-    voice_manager = await VoicesManager.create()
-    fa_voice = voice_manager.find(Gender='Male', Language='fa')[0]['Name']
-    en_voice = voice_manager.find(ShortName='en-US-AvaNeural')[0]['Name']  # type: ignore
+# https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/API_PYTHON.md
+# syn_config = SynthesisConfig(
+#     volume=0.5,  # half as loud
+#     length_scale=2.0,  # twice as slow
+#     noise_scale=1.0,  # more audio variation
+#     noise_w_scale=1.0,  # more speaking variation
+#     normalize_audio=False,  # use raw audio from voice
+# )
+# voice.synthesize_wav(..., syn_config=syn_config)
 
 
 all_origins = {'Access-Control-Allow-Origin': '*'}
@@ -54,6 +56,43 @@ all_origins = {'Access-Control-Allow-Origin': '*'}
 in_q: Queue[str] = Queue(maxsize=50)
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
 out_q: Queue[tuple[str, bool, Queue[bytes | None]]] = Queue(maxsize=5)
+
+
+async def stream_audio_to_q(audio_generator, audio_q):
+    first_chunk = True
+
+    for chunk in audio_generator:
+        if first_chunk:
+            # Create a mock WAV file in memory to get the header
+            mock_wav_file = BytesIO()
+            with wave.open(mock_wav_file, 'wb') as w:
+                w.setframerate(chunk.sample_rate)
+                w.setsampwidth(chunk.sample_width)
+                w.setnchannels(chunk.sample_channels)
+                # The wave library writes a header with a data chunk of size 0
+                # when you close the file without writing frames.
+                # It will automatically be updated with the actual size later.
+                w.close()
+
+            # Seek to the beginning and read the header bytes
+            mock_wav_file.seek(0)
+            wav_header = mock_wav_file.read()
+
+            # The header written by the wave library has a placeholder size.
+            # We need to send this placeholder first. The receiver should be
+            # designed to update the size or handle a stream of unknown size.
+            # For a true live stream, this is the best we can do.
+            await audio_q.put(wav_header)
+
+            first_chunk = False
+
+        # Now stream the raw audio bytes
+        await audio_q.put(chunk.audio_int16_bytes)
+
+    # Note: If the receiving end needs the final size, it must be updated
+    # after the stream ends. For a live stream, this is often not possible
+    # and the receiving player must be tolerant of an empty or incorrect
+    # size field in the header.
 
 
 @routes.put('/monitoring')
@@ -65,11 +104,9 @@ async def _(request: Request) -> Response:
     return Response()
 
 
-this_dir = Path(__file__).parent
-
 monitor_clipboard_args = [
     sys.executable,
-    str(this_dir / 'monitor_clipboard.py'),
+    str(THIS_DIR / 'monitor_clipboard.py'),
 ]
 
 
@@ -87,11 +124,7 @@ async def prefetch_audio():
         await out_q.put((text, is_fa, audio_q))
 
         try:
-            async for message in Communicate(
-                text, voice, connect_timeout=5, receive_timeout=5
-            ).stream():
-                if message['type'] == 'audio':
-                    await audio_q.put(message['data'])  # type: ignore
+            await stream_audio_to_q(voice.synthesize(text), audio_q)
             logger.info(f'Audio cached for: {short_text}')
             await audio_q.put(None)  # Sentinel for end of audio
         except QueueShutDown:
@@ -177,13 +210,13 @@ async def _(request):
         logger.debug('next_request set')
 
 
-audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
+audio_headers = all_origins | {'Content-Type': 'audio/wav'}
 
 
 @routes.get('/reader.html')
 async def _(_):
     return Response(
-        text=(this_dir / 'reader.html').read_bytes().decode(),
+        text=(THIS_DIR / 'reader.html').read_bytes().decode(),
         content_type='text/html',
     )
 
@@ -191,7 +224,7 @@ async def _(_):
 @routes.get('/reader.js')
 async def _(_):
     return Response(
-        text=(this_dir / 'reader.js').read_bytes().decode(),
+        text=(THIS_DIR / 'reader.js').read_bytes().decode(),
         content_type='application/javascript',
     )
 
@@ -199,7 +232,7 @@ async def _(_):
 @routes.get('/reader.css')
 async def _(_):
     return Response(
-        text=(this_dir / 'reader.css').read_bytes().decode(),
+        text=(THIS_DIR / 'reader.css').read_bytes().decode(),
         content_type='text/css',
     )
 

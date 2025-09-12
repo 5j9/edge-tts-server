@@ -9,9 +9,9 @@ readme = 'README.md'
 requires-python = '>=3.12'
 dependencies = [
     'PyQt6',
- 'aiohttp',
- 'edge_tts',
- "loguru>=0.7.3",
+    'aiohttp',
+    "loguru>=0.7.3",
+    "piper-tts>=1.3.0",
 ]
 dynamic = ['version']
 description = 'A Python program than monitors clibboard and reads the modified clibboard text.'

@@ -1,5 +1,6 @@
 ## How It Works
 
+0. Run `voices/download.py` (this step only needs to be done once)
 1. Run `server.py`.
 2. `reader.html` should automatically open in your browser.
 3. Click the `off` button to toggle it to `on`. (Browsers require user interaction for activating autoplay, which is why this is not `on` by default.)
