@@ -11,6 +11,7 @@ from asyncio import (
     sleep,
     to_thread,
 )
+from collections.abc import Iterable
 from io import BytesIO
 from multiprocessing import Pipe, Process
 from pathlib import Path
@@ -26,7 +27,7 @@ from aiohttp.web import (
     run_app,
 )
 from logging_ import logger
-from piper import PiperVoice
+from piper import AudioChunk, PiperVoice
 
 from edge_tts_server.qt_server import run_qt_app
 
@@ -58,7 +59,9 @@ in_q: Queue[str] = Queue(maxsize=50)
 out_q: Queue[tuple[str, bool, Queue[bytes | None]]] = Queue(maxsize=5)
 
 
-async def stream_audio_to_q(audio_generator, audio_q):
+async def stream_audio_to_q(
+    audio_generator: Iterable[AudioChunk], audio_q: Queue
+):
     first_chunk = True
 
     for chunk in audio_generator:
