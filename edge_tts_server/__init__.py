@@ -27,7 +27,7 @@ from aiohttp.web import (
     run_app,
 )
 from logging_ import logger
-from piper import AudioChunk, PiperVoice
+from piper import AudioChunk, PiperVoice, SynthesisConfig
 
 from edge_tts_server.qt_server import run_qt_app
 
@@ -41,14 +41,8 @@ en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')
 fa_voice = PiperVoice.load(THIS_DIR / 'voices/fa_IR-gyro-medium.onnx')
 
 # https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/API_PYTHON.md
-# syn_config = SynthesisConfig(
-#     volume=0.5,  # half as loud
-#     length_scale=2.0,  # twice as slow
-#     noise_scale=1.0,  # more audio variation
-#     noise_w_scale=1.0,  # more speaking variation
-#     normalize_audio=False,  # use raw audio from voice
-# )
-# voice.synthesize_wav(..., syn_config=syn_config)
+en_syn_config = SynthesisConfig()
+fa_syn_config = SynthesisConfig(length_scale=0.8)
 
 
 all_origins = {'Access-Control-Allow-Origin': '*'}
@@ -120,7 +114,9 @@ async def prefetch_audio():
     while True:
         text = await in_q.get()
         is_fa = persian_match(text) is not None
-        voice = fa_voice if is_fa else en_voice
+        voice, syn_config = (
+            (fa_voice, fa_syn_config) if is_fa else (en_voice, en_syn_config)
+        )
         short_text = repr(text[:20] + '...')
         audio_q: Queue[bytes | None] = Queue()
         logger.debug(
@@ -129,7 +125,9 @@ async def prefetch_audio():
         await out_q.put((text, is_fa, audio_q))
 
         try:
-            await stream_audio_to_q(voice.synthesize(text), audio_q)
+            await stream_audio_to_q(
+                voice.synthesize(text, syn_config), audio_q
+            )
             logger.debug(f'Audio cached for {short_text}')
         except QueueShutDown:
             logger.debug(f'audio_q QueueShutDown for {short_text}')
