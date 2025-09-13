@@ -21,7 +21,9 @@ from aiohttp.web import (
     WebSocketResponse,
     run_app,
 )
-from engines.edge import prefetch_audio
+
+# from engines.edge import prefetch_audio
+from engines.piper import prefetch_audio
 from logging_ import logger
 
 from edge_tts_server.qt_server import run_qt_app
