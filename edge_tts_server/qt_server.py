@@ -49,7 +49,7 @@ def on_clipboard_changed():
     """
     global last_processed_time
 
-    current_time = time()
+    current_time = time()  # type: ignore
     # Debounce mechanism to prevent rapid, duplicate processing
     if current_time - last_processed_time < DEBOUNCE_SECONDS:
         logger.info('Debouncing duplicate signal.')
