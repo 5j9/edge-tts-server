@@ -67,7 +67,7 @@ function next() {
 }
 
 async function play() {
-	audio.src = 'audio?' + Date.now(); // Bypasses browser cache
+	audio.src = 'audio';
 	audio.play().catch((e) => {
 		console.error(e);
 	});
