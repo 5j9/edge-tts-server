@@ -30,7 +30,7 @@ def skip(text: str):
     """
     length = len(text)
     if length < 30:
-        logger.info('len(text) < 30. Skipping.')
+        logger.info(f'{length=} < 30. Skipping.')
         return True
     if text.count(' ') / length < 0.05:
         logger.info('Space count less than 5%. Skipping.')
