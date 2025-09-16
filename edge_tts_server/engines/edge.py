@@ -32,7 +32,6 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
             f'Prefetching audio for: {short_text} {out_q.qsize()}/{out_q.maxsize}'
         )
         await out_q.put((text, is_fa, audio_q))
-
         try:
             async for message in Communicate(
                 text, voice, connect_timeout=5, receive_timeout=5
@@ -40,10 +39,10 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
                 if message['type'] == 'audio':
                     await audio_q.put(message['data'])  # type: ignore
             logger.info(f'Audio cached for: {short_text}')
-            await audio_q.put(None)  # Sentinel for end of audio
         except QueueShutDown:
             logger.debug(f'audio_q QueueShutDown for {short_text}')
         except Exception as e:
             logger.error(f'Error prefetching audio for {short_text}: {e!r}')
         finally:
+            audio_q.shutdown()
             in_q.task_done()

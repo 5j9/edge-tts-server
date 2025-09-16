@@ -67,7 +67,7 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
             (fa_voice, fa_syn_config) if is_fa else (en_voice, en_syn_config)
         )
         short_text = repr(text[:20] + '...')
-        audio_q: Queue[bytes | None] = Queue()
+        audio_q: Queue[bytes] = Queue()
         logger.debug(
             f'Caching audio for {short_text} {out_q.qsize()}/{out_q.maxsize}'
         )
@@ -83,4 +83,5 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
         except Exception as e:
             logger.error(f'Error prefetching audio for {short_text}: {e!r}')
         finally:
+            audio_q.shutdown()
             in_q.task_done()

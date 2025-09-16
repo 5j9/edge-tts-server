@@ -5,6 +5,7 @@ import webbrowser
 from asyncio import (
     Event,
     Queue,
+    QueueShutDown,
     new_event_loop,
     sleep,
     to_thread,
@@ -36,9 +37,9 @@ def load_prefetch_function():
     """
     config = loads((this_dir / 'config.json').read_bytes())
     if config['tts-engine'] == 'edge':
-        from edge_tts_server.engines.piper import prefetch_audio
-    else:
         from edge_tts_server.engines.edge import prefetch_audio
+    else:
+        from edge_tts_server.engines.piper import prefetch_audio
     return prefetch_audio
 
 
@@ -52,7 +53,7 @@ all_origins = {'Access-Control-Allow-Origin': '*'}
 # Queue to store incoming clipboard texts
 in_q: Queue[str] = Queue(maxsize=50)
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
-out_q: Queue[tuple[str, bool, Queue[bytes | None]]] = Queue(maxsize=5)
+out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=5)
 
 
 @routes.put('/monitoring')
@@ -103,7 +104,7 @@ next_request = Event()
 
 @routes.get('/next')
 async def _(request: Request) -> Response:
-    current_audio_q.shutdown()
+    current_audio_q.shutdown(immediate=True)
     next_request.set()
     return Response()
 
@@ -181,13 +182,12 @@ async def _(request: Request) -> StreamResponse:
     try:
         while True:
             data = await audio_q.get()
-            if data is None:  # Sentinel for end of audio
-                break
             await response.write(data)
             audio_q.task_done()
+    except QueueShutDown:
+        logger.debug('/audio reached QueueShutDown')
     except Exception as e:
-        logger.error(f'Audio serving error: {e!r}')
-    logger.info('Serving audio finished.')
+        logger.error(f'unexpected error: {e!r}')
     return response
 
 
