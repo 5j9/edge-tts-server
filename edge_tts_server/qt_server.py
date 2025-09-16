@@ -62,13 +62,13 @@ def on_clipboard_changed():
     if not mime_data.hasText():
         return
 
-    text = mime_data.text()
+    text = rm_urls(mime_data.text()).replace('#', '').replace('*', '')
     if skip(text):
         return
 
     logger.info(f'Received text: {text[:50]}...')  # Log a snippet for brevity
     # Send the processed text (URLs removed) through the pipe
-    conn.send(rm_urls(text))
+    conn.send(text)
 
 
 partial_on_clipboard_changed = partial(on_clipboard_changed)
