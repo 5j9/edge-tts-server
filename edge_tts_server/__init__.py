@@ -9,6 +9,7 @@ from asyncio import (
     sleep,
     to_thread,
 )
+from json import loads
 from multiprocessing import Pipe, Process
 from pathlib import Path
 
@@ -21,12 +22,27 @@ from aiohttp.web import (
     WebSocketResponse,
     run_app,
 )
-
-# from engines.edge import prefetch_audio
-from engines.piper import prefetch_audio
 from logging_ import logger
 
 from edge_tts_server.qt_server import run_qt_app
+
+this_dir = Path(__file__).parent
+
+
+def load_prefetch_function():
+    """
+    The piper engine uses a lot more memory, but is usually more responsive.
+    Edge endgine uses the Microsoft edge tts servers.
+    """
+    config = loads((this_dir / 'config.json').read_bytes())
+    if config['tts-engine'] == 'edge':
+        from edge_tts_server.engines.piper import prefetch_audio
+    else:
+        from edge_tts_server.engines.edge import prefetch_audio
+    return prefetch_audio
+
+
+prefetch_audio = load_prefetch_function()
 
 routes = RouteTableDef()
 
@@ -47,8 +63,6 @@ async def _(request: Request) -> Response:
     logger.info(f'monitoring state: {new_state}')
     return Response()
 
-
-this_dir = Path(__file__).parent
 
 monitor_clipboard_args = [
     sys.executable,
