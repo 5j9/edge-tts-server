@@ -38,8 +38,7 @@ def skip(text: str):
     return False
 
 
-last_processed_time = 0.0
-DEBOUNCE_SECONDS = 0.1
+previous_hash: int | None = None
 
 
 def on_clipboard_changed():
@@ -47,15 +46,7 @@ def on_clipboard_changed():
     Callback function triggered when clipboard content changes.
     Processes the text if monitoring is active and sends it via the pipe.
     """
-    global last_processed_time
-
-    current_time = time()  # type: ignore
-    # Debounce mechanism to prevent rapid, duplicate processing
-    if current_time - last_processed_time < DEBOUNCE_SECONDS:
-        logger.info('Debouncing duplicate signal.')
-        return
-    last_processed_time = current_time
-
+    global previous_hash
     mime_data = clipboard.mimeData()
     assert mime_data is not None
     # Only process if the clipboard contains text
@@ -65,6 +56,15 @@ def on_clipboard_changed():
     text = rm_urls(mime_data.text()).replace('#', '').replace('*', '')
     if skip(text):
         return
+
+    # Debounce mechanism to prevent rapid, duplicate processing
+    new_hash = hash(text)
+    if new_hash == previous_hash:
+        logger.info('Debouncing duplicate text.')
+        previous_hash = None
+        return
+    else:
+        previous_hash = new_hash
 
     logger.info(f'Received text: {text[:50]}...')  # Log a snippet for brevity
     # Send the processed text (URLs removed) through the pipe
