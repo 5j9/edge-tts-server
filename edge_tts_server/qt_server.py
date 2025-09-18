@@ -1,7 +1,6 @@
 import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
-from time import time
 
 from logging_ import logger
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -312,72 +311,3 @@ def run_qt_app(pipe: PipeConnection):
 
     # Start the Qt application event loop
     qt_app.exec()
-
-
-if __name__ == '__main__':
-    # This block is for testing the tray icon functionality independently.
-    # In your actual multiprocessing setup, `run_qt_app` will be called
-    # in a separate process with two PipeConnections.
-    # For a standalone test, we create two dummy PipeConnection pairs.
-
-    import threading
-    import time
-    from multiprocessing import Pipe
-
-    aio_conn, conn = Pipe()
-
-    print(
-        'Running Qt application with tray icon. Look for the icon in your system tray.'
-    )
-    print('Right-click the icon to see options.')
-    print('Simulating control messages being sent to the Qt app...')
-
-    # Simulate sending control messages from the "main process" side
-    def simulate_control_messages():
-        print('\nSimulating control messages (True/False) to Qt app...')
-        # Send False after 3 seconds (pause monitoring)
-        aio_conn.send(False)
-        print('Sent False to control pipe (pause monitoring)')
-        time.sleep(3)
-
-        # Send True after 3 more seconds (resume monitoring)
-        aio_conn.send(True)
-        print('Sent True to control pipe (resume monitoring)')
-        time.sleep(3)
-
-        # Send False again after 3 more seconds
-        aio_conn.send(False)
-        print('Sent False to control pipe (pause monitoring)')
-        time.sleep(3)
-
-        # Send True again after 3 more seconds
-        aio_conn.send(True)
-        print('Sent True to control pipe (resume monitoring)')
-        time.sleep(3)
-
-        # Close the control pipe to signal end of messages
-        aio_conn.close()
-
-    # This part would typically be in the *other* process that communicates with the Qt app.
-    # For this standalone test, we run it in a separate thread to avoid blocking the Qt event loop.
-    control_sim_thread = threading.Thread(target=simulate_control_messages)
-    control_sim_thread.daemon = (
-        True  # Allow thread to exit when main program exits
-    )
-    control_sim_thread.start()
-
-    # Start the Qt application
-    # Pass the appropriate ends of the pipes to run_qt_app
-    run_qt_app(conn)
-
-    # After qt_app.exec() finishes (when the app quits), clean up pipes
-    conn.close()
-
-    # In a real multiprocessing scenario, the main process would read from
-    # main_clipboard_recv_pipe here if it needed to process clipboard data.
-    # For this test, we just ensure it's closed.
-    aio_conn.close()
-    control_sim_thread.join(
-        timeout=1
-    )  # Give the simulation thread a chance to finish
-    print('Qt application exited.')
