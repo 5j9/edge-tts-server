@@ -1,8 +1,8 @@
 from asyncio import Queue, QueueShutDown
 
 from edge_tts import Communicate, VoicesManager
-from logging_ import logger
 
+from edge_tts_server.lib import SizeUpdatingQ, logger
 from engines import persian_match
 
 # See set_voice_names for how to retrieve and search available voices
@@ -21,7 +21,7 @@ async def set_voice_names():
     en_voice = voice_manager.find(ShortName='en-US-AvaNeural')[0]['Name']  # type: ignore
 
 
-async def prefetch_audio(in_q: Queue, out_q: Queue):
+async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
     """Prefetch audio for all texts in the queue."""
     while True:
         text = await in_q.get()
@@ -29,9 +29,6 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
         voice = fa_voice if is_fa else en_voice
         short_text = text[:20] + '...'
         audio_q: Queue[bytes | None] = Queue()
-        logger.info(
-            f'Prefetching audio for: {short_text} {out_q.qsize()}/{out_q.maxsize}'
-        )
         await out_q.put((text, is_fa, audio_q))
         try:
             async for message in Communicate(
@@ -46,4 +43,4 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
             logger.error(f'Error prefetching audio for {short_text}: {e!r}')
         finally:
             audio_q.shutdown()
-            in_q.task_done()
+            await in_q.atask_done()

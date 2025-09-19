@@ -3,3 +3,11 @@ button {
 	width: 50px;
 	padding: 0;
 }
+
+.indicator {
+	line-height: 10px;
+	font-size: small;
+	border: black;
+	background-color: lightgray;
+	border-radius: 5px;
+}

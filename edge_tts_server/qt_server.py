@@ -2,7 +2,6 @@ import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
 
-from logging_ import logger
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
@@ -12,6 +11,8 @@ from PyQt6.QtWidgets import (
     QStyle,
     QSystemTrayIcon,
 )
+
+from edge_tts_server.lib import logger
 
 qt_app = QApplication([])
 # Ensure the application continues to run even if there are no visible windows,

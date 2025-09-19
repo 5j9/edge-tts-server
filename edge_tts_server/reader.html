@@ -1,5 +1,8 @@
 <html lang="fa">
-<meta charset="UTF-8">
+
+<head>
+    <meta charset="UTF-8">
+</head>
 
 <body>
     <div>
@@ -9,13 +12,16 @@
         <button type="button" onclick="jumpForward()">⏩</button>
         <button type="button" onclick="stop()">⏹</button>
         <button type="button" onclick="next()" id="next">⏭</button>
+        <span class="indicator">Input Queue: <span id="input-queue-size">0</span></span>
+        <span class="indicator">Output Queue: <span id="output-queue-size">0</span></span>
+        <span class="indicator">Status: <span id="status">🔴</span></span>
     </div>
+
     <div class="editable" contenteditable="true" id="editable_field" style="white-space: pre-wrap;" dir="ltr">
     </div>
     <button id='clear'>CLEAR</button>
 
 </body>
-
 <script src="./reader.js"></script>
 <link rel="stylesheet" href="./reader.css">
 

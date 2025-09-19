@@ -90,7 +90,7 @@ var ws;
 function onCloseOrError(e) {
 	ws.onclose = ws.onmessage = ws.onopen = ws.onerror = null;
 	var dt = new Date();
-	editableField.textContent = `${dt}: WebSocket closed or error; will retry in 2 seconds ${e}`;
+	document.getElementById('status').textContent = '🔴';
 	setTimeout(startWs, 2000);
 	ws.close();
 }
@@ -100,13 +100,13 @@ function startWs() {
 	try {
 		ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
 	} catch {
-		console.log('new WebSocket failed.');
 		onCloseOrError();
 		return;
 	}
 
 	ws.onerror = ws.onclose = onCloseOrError;
 	ws.onopen = () => { // sync up the monitoring state with server
+		document.getElementById('status').textContent = '🟢';
 		fetch(home + 'monitoring', { method: 'PUT', body: JSON.stringify(monitoring) });
 	}
 	ws.onmessage = (e) => {
@@ -122,6 +122,12 @@ function startWs() {
 				editableField.textContent = text;
 				nextButton.disabled = false;
 				play();
+				break;
+			case 'input-queue-size':
+				document.getElementById('input-queue-size').textContent = j.value;
+				break;
+			case 'output-queue-size':
+				document.getElementById('output-queue-size').textContent = j.value;
 				break;
 		}
 	}

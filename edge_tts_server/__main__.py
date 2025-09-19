@@ -23,8 +23,8 @@ from aiohttp.web import (
     WebSocketResponse,
     run_app,
 )
-from logging_ import logger
 
+from edge_tts_server.lib import SizeUpdatingQ, logger
 from edge_tts_server.qt_server import run_qt_app
 
 this_dir = Path(__file__).parent
@@ -50,10 +50,15 @@ routes = RouteTableDef()
 
 all_origins = {'Access-Control-Allow-Origin': '*'}
 
+
 # Queue to store incoming clipboard texts
-in_q: Queue[str] = Queue(maxsize=50)
+in_q: SizeUpdatingQ[str] = SizeUpdatingQ(
+    maxsize=50, action='input-queue-size', current_ws_container=globals()
+)
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
-out_q: Queue[tuple[str, bool, Queue[bytes]]] = Queue(maxsize=5)
+out_q: SizeUpdatingQ[tuple[str, bool, Queue[bytes]]] = SizeUpdatingQ(
+    maxsize=5, action='output-queue-size', current_ws_container=globals()
+)
 
 
 @routes.put('/monitoring')
@@ -88,9 +93,6 @@ async def listen_to_qt():
 
             if type(data) is str:
                 data = data.strip()
-                logger.info(
-                    f'Adding to in_q: {data[:20]!r}... {in_q.qsize()}/{in_q.maxsize}'
-                )
                 await in_q.put(data)
                 continue
 
@@ -140,7 +142,7 @@ async def _(request):
             await ws.close()
             return ws
         finally:
-            out_q.task_done()
+            await out_q.atask_done()
         logger.debug('awaiting next_request')
         await next_request.wait()
         logger.debug('next_request set')

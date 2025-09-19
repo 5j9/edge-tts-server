@@ -4,9 +4,10 @@ from collections.abc import Iterable
 from io import BytesIO
 from pathlib import Path
 
-from engines import persian_match
-from logging_ import logger
 from piper import AudioChunk, PiperVoice, SynthesisConfig
+
+from edge_tts_server.lib import SizeUpdatingQ, logger
+from engines import persian_match
 
 THIS_DIR = Path(__file__).parent
 en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')
@@ -58,7 +59,7 @@ async def stream_audio_to_q(
     # size field in the header.
 
 
-async def prefetch_audio(in_q: Queue, out_q: Queue):
+async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
     """Prefetch audio for all texts in the queue."""
     while True:
         text = await in_q.get()
@@ -68,9 +69,6 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
         )
         short_text = repr(text[:20] + '...')
         audio_q: Queue[bytes] = Queue()
-        logger.debug(
-            f'Caching audio for {short_text} {out_q.qsize()}/{out_q.maxsize}'
-        )
         await out_q.put((text, is_fa, audio_q))
 
         try:
@@ -84,4 +82,4 @@ async def prefetch_audio(in_q: Queue, out_q: Queue):
             logger.error(f'Error prefetching audio for {short_text}: {e!r}')
         finally:
             audio_q.shutdown()
-            in_q.task_done()
+            await in_q.atask_done()
