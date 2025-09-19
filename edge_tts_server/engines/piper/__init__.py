@@ -4,10 +4,10 @@ from collections.abc import Iterable
 from io import BytesIO
 from pathlib import Path
 
-from engines import persian_match
 from piper import AudioChunk, PiperVoice, SynthesisConfig
 
 from edge_tts_server import SizeUpdatingQ, logger
+from edge_tts_server.engines import persian_match
 
 THIS_DIR = Path(__file__).parent
 en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')
