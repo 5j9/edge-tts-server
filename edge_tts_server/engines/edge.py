@@ -1,9 +1,9 @@
 from asyncio import Queue, QueueShutDown
 
 from edge_tts import Communicate, VoicesManager
-
-from edge_tts_server.lib import SizeUpdatingQ, logger
 from engines import persian_match
+
+from edge_tts_server import SizeUpdatingQ, logger
 
 # See set_voice_names for how to retrieve and search available voices
 fa_voice: str = (

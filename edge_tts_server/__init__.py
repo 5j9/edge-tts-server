@@ -3,6 +3,8 @@ from asyncio import Queue
 
 from loguru import logger
 
+__version__ = '2025.09.19'
+
 # Remove the default handler to prevent duplicate output if you're reconfiguring
 logger.remove()
 

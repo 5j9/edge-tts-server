@@ -24,7 +24,7 @@ from aiohttp.web import (
     run_app,
 )
 
-from edge_tts_server.lib import SizeUpdatingQ, logger
+from edge_tts_server import SizeUpdatingQ, logger
 from edge_tts_server.qt_server import run_qt_app
 
 this_dir = Path(__file__).parent

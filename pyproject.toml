@@ -4,6 +4,7 @@ build-backend = 'uv_build'
 
 [project]
 name = 'edge-tts-server'
+version = '2025.09.19'
 authors = [{ name = '5j9', email = '5j9@users.noreply.github.com' }]
 readme = 'README.md'
 requires-python = '>=3.12'
