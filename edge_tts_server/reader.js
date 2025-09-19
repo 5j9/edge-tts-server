@@ -111,14 +111,14 @@ function startWs() {
 	}
 	ws.onmessage = (e) => {
 		var j = JSON.parse(e.data);
-		switch (j['action']) {
+		switch (j.action) {
 			case 'toggle-monitoring':
-				monitoring = j['state'];
+				monitoring = j.state;
 				toggleButton.textContent = monitoring ? '⏽' : '⭘';
 				break;
 			case 'new-text':
-				var text = j['text'];
-				editableField.dir = j['is_fa'] ? 'rtl' : 'ltr';
+				var text = j.text;
+				editableField.dir = j.is_fa ? 'rtl' : 'ltr';
 				editableField.textContent = text;
 				nextButton.disabled = false;
 				play();
