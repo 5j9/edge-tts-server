@@ -131,6 +131,7 @@ wheels = [
 
 [[package]]
 name = "edge-tts-server"
+version = "2025.9.19"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
