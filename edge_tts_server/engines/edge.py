@@ -28,7 +28,7 @@ async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
         is_fa = persian_match(text) is not None
         voice = fa_voice if is_fa else en_voice
         short_text = text[:20] + '...'
-        audio_q: Queue[bytes | None] = Queue()
+        audio_q: Queue[bytes] = Queue()
         await out_q.put((text, is_fa, audio_q))
         try:
             async for message in Communicate(
