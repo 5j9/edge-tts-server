@@ -7,7 +7,7 @@ from pathlib import Path
 from piper import AudioChunk, PiperVoice, SynthesisConfig
 
 from edge_tts_server import SizeUpdatingQ, logger
-from edge_tts_server.engines import persian_match
+from edge_tts_server.engines import AudioQ, persian_match
 
 THIS_DIR = Path(__file__).parent
 en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')
@@ -68,7 +68,7 @@ async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
             (fa_voice, fa_syn_config) if is_fa else (en_voice, en_syn_config)
         )
         short_text = repr(text[:20] + '...')
-        audio_q: Queue[bytes] = Queue()
+        audio_q: AudioQ = Queue()
         await out_q.put((text, is_fa, audio_q))
 
         try:

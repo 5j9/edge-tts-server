@@ -3,7 +3,7 @@ from asyncio import Queue, QueueShutDown
 from edge_tts import Communicate, VoicesManager
 
 from edge_tts_server import SizeUpdatingQ, logger
-from edge_tts_server.engines import persian_match
+from edge_tts_server.engines import AudioQ, persian_match
 
 # See set_voice_names for how to retrieve and search available voices
 fa_voice: str = (
@@ -28,7 +28,7 @@ async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
         is_fa = persian_match(text) is not None
         voice = fa_voice if is_fa else en_voice
         short_text = text[:20] + '...'
-        audio_q: Queue[bytes] = Queue()
+        audio_q: AudioQ = Queue()
         await out_q.put((text, is_fa, audio_q))
         try:
             async for message in Communicate(
