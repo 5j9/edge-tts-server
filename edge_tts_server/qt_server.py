@@ -53,7 +53,7 @@ def on_clipboard_changed():
     if not mime_data.hasText():
         return
 
-    text = rm_urls(mime_data.text()).replace('#', '').replace('*', '')
+    text = rm_urls(mime_data.text()).strip().replace('#', '').replace('*', '')
     if skip(text):
         return
 
