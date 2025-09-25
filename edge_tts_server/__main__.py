@@ -32,11 +32,13 @@ this_dir = Path(__file__).parent
 
 def load_prefetch_function():
     """
-    The piper engine uses a lot more memory, but is usually more responsive.
-    Edge endgine uses the Microsoft edge tts servers.
+    piper-tts engine uses a lot more memory, but is usually more responsive.
+    edge-tts engine uses the Microsoft Edge tts servers.
+    ms-sapi uses Microsoft Speech API (SAPI). It has limited features,
+        but is usually the most responsive one.
     """
     config = loads((this_dir / 'config.json').read_bytes())
-    if config['tts-engine'] == 'edge':
+    if config['engine'] == 'edge-tts':
         from edge_tts_server.engines.edge import prefetch_audio
     else:
         from edge_tts_server.engines.piper import prefetch_audio

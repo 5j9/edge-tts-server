@@ -1,4 +1,4 @@
 {
-    "comment": "tts-engine can be either 'edge' or 'piper'",
-    "tts-engine": "edge"
+    "comment": "The engine can be either 'edge-tts' or 'piper-tts'.",
+    "engine": "edge-tts"
 }
