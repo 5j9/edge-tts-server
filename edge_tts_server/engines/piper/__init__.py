@@ -68,7 +68,7 @@ async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
             (fa_voice, fa_syn_config) if is_fa else (en_voice, en_syn_config)
         )
         short_text = repr(text[:20] + '...')
-        audio_q: AudioQ = Queue()
+        audio_q = AudioQ()
         await out_q.put((text, is_fa, audio_q))
 
         try:

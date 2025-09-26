@@ -1,5 +1,5 @@
 # WIP
-from asyncio import Queue, QueueShutDown
+from asyncio import QueueShutDown
 
 import win32com.client as wincl
 
@@ -22,7 +22,7 @@ async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
         text: str = await in_q.get()
         is_fa = persian_match(text) is not None
         short_text = text[:20] + '...'
-        audio_q: AudioQ = Queue()
+        audio_q = AudioQ()
         await out_q.put((text, is_fa, audio_q))
         try:
             speak(text, INTERRUPT_AND_SPEAK)

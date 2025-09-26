@@ -1,4 +1,4 @@
-from asyncio import Queue, QueueShutDown
+from asyncio import QueueShutDown
 
 from edge_tts import Communicate, VoicesManager
 
@@ -28,7 +28,7 @@ async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
         is_fa = persian_match(text) is not None
         voice = fa_voice if is_fa else en_voice
         short_text = text[:20] + '...'
-        audio_q: AudioQ = Queue()
+        audio_q = AudioQ()
         await out_q.put((text, is_fa, audio_q))
         try:
             async for message in Communicate(
