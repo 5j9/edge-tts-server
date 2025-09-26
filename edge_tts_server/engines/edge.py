@@ -32,7 +32,7 @@ async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
         await out_q.put((text, is_fa, audio_q))
         try:
             async for message in Communicate(
-                text, voice, connect_timeout=5, receive_timeout=5
+                text, voice, connect_timeout=5, receive_timeout=10
             ).stream():
                 if message['type'] == 'audio':
                     await audio_q.put(message['data'])  # type: ignore
