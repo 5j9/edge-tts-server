@@ -1,6 +1,7 @@
 import sys
 from asyncio import Queue
 
+from aiohttp import ClientConnectionResetError
 from loguru import logger
 
 __version__ = '2025.09.19'
@@ -30,12 +31,15 @@ class SizeUpdatingQ[T](Queue):
     async def update_front_end_status(self):
         current_ws = self.current_ws_container.get('current_ws')
         if current_ws is not None:
-            await current_ws.send_json(
-                {
-                    'action': self.action,
-                    'value': f'{self.qsize()}/{self.maxsize}',
-                }
-            )
+            try:
+                await current_ws.send_json(
+                    {
+                        'action': self.action,
+                        'value': f'{self.qsize()}/{self.maxsize}',
+                    }
+                )
+            except ClientConnectionResetError:
+                logger.warning('Could not update front-end status')
 
     def task_done(self):
         raise NotImplementedError('use `atask_done` instead')
