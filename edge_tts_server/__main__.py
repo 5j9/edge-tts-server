@@ -17,7 +17,7 @@ from aiohttp.web import (
     run_app,
 )
 
-from edge_tts_server import InputQ, OutputQ, SizeUpdatingQ, logger
+from edge_tts_server import InputQ, OutputQ, logger
 from edge_tts_server.qt_server import run_qt_app
 
 this_dir = Path(__file__).parent
@@ -46,12 +46,10 @@ routes = RouteTableDef()
 all_origins = {'Access-Control-Allow-Origin': '*'}
 
 
-# Queue to store incoming clipboard texts
-in_q: InputQ = SizeUpdatingQ(
+in_q = InputQ(
     maxsize=50, action='input-queue-size', current_ws_container=globals()
 )
-# Queue to store pre-generated audio data (text, is_fa, audio_q)
-out_q: OutputQ = SizeUpdatingQ(
+out_q = OutputQ(
     maxsize=5, action='output-queue-size', current_ws_container=globals()
 )
 

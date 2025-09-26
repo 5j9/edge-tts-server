@@ -46,5 +46,7 @@ class SizeUpdatingQ[T](Queue):
 
 
 AudioQ = Queue[bytes]
+# Queue to store incoming clipboard texts
 InputQ = SizeUpdatingQ[str]
+# Queue to store pre-generated audio data
 OutputQ = SizeUpdatingQ[tuple[str, bool, AudioQ]]
