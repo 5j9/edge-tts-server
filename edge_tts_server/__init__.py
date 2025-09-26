@@ -43,3 +43,8 @@ class SizeUpdatingQ[T](Queue):
     async def atask_done(self):
         super().task_done()
         await self.update_front_end_status()
+
+
+AudioQ = Queue[bytes]
+InputQ = SizeUpdatingQ[str]
+OutputQ = SizeUpdatingQ[tuple[str, bool, AudioQ]]

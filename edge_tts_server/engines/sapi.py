@@ -3,8 +3,8 @@ from asyncio import Queue, QueueShutDown
 
 import win32com.client as wincl
 
-from edge_tts_server import SizeUpdatingQ, logger
-from edge_tts_server.engines import AudioQ, persian_match
+from edge_tts_server import AudioQ, InputQ, OutputQ, logger
+from edge_tts_server.engines import persian_match
 
 # Initialize the SAPI.SpVoice COM object
 speaker = wincl.Dispatch('SAPI.SpVoice')
@@ -16,7 +16,7 @@ INTERRUPT_AND_SPEAK = SVSFlagsAsync | SVSFPurgeBeforeSpeak
 speak = speaker.Speak
 
 
-async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
+async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
     """Prefetch audio for all texts in the queue."""
     while True:
         text: str = await in_q.get()

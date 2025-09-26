@@ -2,13 +2,7 @@ __version__ = '0.1.dev0'
 
 import sys
 import webbrowser
-from asyncio import (
-    Event,
-    QueueShutDown,
-    new_event_loop,
-    sleep,
-    to_thread,
-)
+from asyncio import Event, QueueShutDown, new_event_loop, sleep, to_thread
 from json import loads
 from multiprocessing import Pipe, Process
 from pathlib import Path
@@ -23,8 +17,7 @@ from aiohttp.web import (
     run_app,
 )
 
-from edge_tts_server import SizeUpdatingQ, logger
-from edge_tts_server.engines import AudioQ
+from edge_tts_server import InputQ, OutputQ, SizeUpdatingQ, logger
 from edge_tts_server.qt_server import run_qt_app
 
 this_dir = Path(__file__).parent
@@ -54,11 +47,11 @@ all_origins = {'Access-Control-Allow-Origin': '*'}
 
 
 # Queue to store incoming clipboard texts
-in_q: SizeUpdatingQ[str] = SizeUpdatingQ(
+in_q: InputQ = SizeUpdatingQ(
     maxsize=50, action='input-queue-size', current_ws_container=globals()
 )
 # Queue to store pre-generated audio data (text, is_fa, audio_q)
-out_q: SizeUpdatingQ[tuple[str, bool, AudioQ]] = SizeUpdatingQ(
+out_q: OutputQ = SizeUpdatingQ(
     maxsize=5, action='output-queue-size', current_ws_container=globals()
 )
 

@@ -2,8 +2,8 @@ from asyncio import Queue, QueueShutDown
 
 from edge_tts import Communicate, VoicesManager
 
-from edge_tts_server import SizeUpdatingQ, logger
-from edge_tts_server.engines import AudioQ, persian_match
+from edge_tts_server import AudioQ, InputQ, OutputQ, logger
+from edge_tts_server.engines import persian_match
 
 # See set_voice_names for how to retrieve and search available voices
 fa_voice: str = (
@@ -21,7 +21,7 @@ async def set_voice_names():
     en_voice = voice_manager.find(ShortName='en-US-AvaNeural')[0]['Name']  # type: ignore
 
 
-async def prefetch_audio(in_q: SizeUpdatingQ, out_q: Queue):
+async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
     """Prefetch audio for all texts in the queue."""
     while True:
         text = await in_q.get()
