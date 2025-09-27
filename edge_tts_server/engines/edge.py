@@ -1,6 +1,8 @@
 from asyncio import QueueShutDown
 
+from aiohttp import ClientOSError
 from edge_tts import Communicate, VoicesManager
+from edge_tts.exceptions import NoAudioReceived
 
 from edge_tts_server import AudioQ, InputQ, OutputQ, logger
 from edge_tts_server.engines import persian_match
@@ -31,12 +33,18 @@ async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
         audio_q = AudioQ()
         await out_q.put((text, is_fa, audio_q))
         try:
-            async for message in Communicate(
-                text, voice, connect_timeout=5, receive_timeout=10
-            ).stream():
-                if message['type'] == 'audio':
-                    await audio_q.put(message['data'])  # type: ignore
-            logger.info(f'Audio cached for: {short_text}')
+            for _ in range(3):
+                try:
+                    async for message in Communicate(
+                        text, voice, connect_timeout=5, receive_timeout=20
+                    ).stream():
+                        if message['type'] == 'audio':
+                            await audio_q.put(message['data'])  # type: ignore
+                except (ClientOSError, NoAudioReceived) as e:
+                    logger.debug(f'Retrying Communicate.stream after {e!r}.')
+                    continue
+                logger.info(f'Audio cached for: {short_text}')
+                break
         except QueueShutDown:
             logger.debug(f'audio_q QueueShutDown for {short_text}')
         except Exception as e:
