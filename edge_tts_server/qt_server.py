@@ -21,7 +21,7 @@ qt_app.setQuitOnLastWindowClosed(False)
 
 clipboard: QClipboard = qt_app.clipboard()  # type: ignore
 
-rm_urls = partial(re.compile(r'https?:\/\/[^\s]*').sub, '')
+rm_urls = partial(re.compile(r'[A-z]*:\/\/[^\s]*').sub, '')
 
 
 def skip(text: str):
