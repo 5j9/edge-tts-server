@@ -1,6 +1,6 @@
 from asyncio import QueueShutDown
 
-from aiohttp import ClientOSError, ConnectionTimeoutError
+from aiohttp import ClientOSError, ConnectionTimeoutError, SocketTimeoutError
 from edge_tts import Communicate, VoicesManager
 from edge_tts.exceptions import NoAudioReceived
 
@@ -45,6 +45,7 @@ async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
                         ClientOSError,
                         NoAudioReceived,
                         ConnectionTimeoutError,
+                        SocketTimeoutError,
                     ) as e:
                         logger.debug(
                             f'Retrying Communicate.stream after {e!r}.'
