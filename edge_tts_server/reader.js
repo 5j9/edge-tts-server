@@ -25,7 +25,6 @@ favicon.href = `data:image/svg+xml,
     	<text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="black">🗣️</text>
 	</svg >`
 document.head.appendChild(favicon);
-document.body.style.zoom = '2';
 
 /**@type{HTMLButtonElement} */
 // @ts-ignore
