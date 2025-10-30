@@ -4,7 +4,6 @@ import sys
 import webbrowser
 from asyncio import Event, QueueShutDown, new_event_loop, sleep, to_thread
 from collections.abc import Awaitable, Callable
-from json import loads
 from multiprocessing import Pipe, Process
 from pathlib import Path
 
@@ -18,7 +17,7 @@ from aiohttp.web import (
     run_app,
 )
 
-from edge_tts_server import AudioQ, InputQ, OutputQ, logger
+from edge_tts_server import AudioQ, InputQ, OutputQ, config, logger
 from edge_tts_server.engines import detect_lang
 from edge_tts_server.qt_server import run_qt_app
 
@@ -63,9 +62,6 @@ async def prefetch_audio_loop(
         logger.critical('Fatal Error')
 
 
-config = loads((this_dir / 'config.json').read_bytes())
-
-
 def load_engine():
     """
     piper-tts engine uses a lot more memory, but is usually more responsive.
@@ -73,7 +69,7 @@ def load_engine():
     ms-sapi uses Microsoft Speech API (SAPI). It has limited features,
         but is usually the most responsive one.
     """
-    engine: str = config['engine']
+    engine: str = config.engine
 
     match engine:
         case 'edge':
@@ -275,7 +271,7 @@ if __name__ == '__main__':
     # loop.create_task(set_voice_names())
 
     qt_conn, conn = Pipe(True)
-    conn.send(config)
+    conn.send((config.min_space_ratio, config.min_text_length))
     qt_process = Process(target=run_qt_app, args=(qt_conn,))
     qt_process.start()
     listen_to_qt_task = create_task(listen_to_qt())

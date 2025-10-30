@@ -197,9 +197,8 @@ class PipeReaderThread(QThread):
                 if type(msg) is bool:
                     logger.info(f'PipeReaderThread received message: {msg}')
                     self.data_received.emit(msg)
-                elif type(msg) is dict:
-                    min_space_ratio = msg['min_space_ratio']
-                    min_text_length = msg['min_text_length']
+                elif type(msg) is tuple:
+                    min_space_ratio, min_text_length = msg
                 else:
                     logger.warning(
                         f'PipeReaderThread received non-boolean message from pipe: {msg}'
