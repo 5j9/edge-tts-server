@@ -23,17 +23,20 @@ clipboard: QClipboard = qt_app.clipboard()  # type: ignore
 
 rm_urls = partial(re.compile(r'[A-z]*:\/\/[^\s]*').sub, '')
 
+min_text_length: int
+min_space_ratio: float
+
 
 def skip(text: str):
     """
     Determines if the given text should be skipped based on length and space density.
     """
     length = len(text)
-    if length < 30:
-        logger.info(f'{length=} < 30. Skipping.')
+    if length < min_text_length:
+        logger.info(f'{length=} < {min_text_length=}. Skipping.')
         return True
-    if text.count(' ') / length < 0.05:
-        logger.info('Space count less than 5%. Skipping.')
+    if text.count(' ') / length < min_space_ratio:
+        logger.info(f'Space count less than {min_space_ratio}. Skipping.')
         return True
     return False
 
@@ -186,6 +189,7 @@ class PipeReaderThread(QThread):
         """
         Continuously reads from the pipe and emits data.
         """
+        global min_space_ratio, min_text_length
         logger.info('PipeReaderThread started.')
         while self._running:
             try:
@@ -193,6 +197,9 @@ class PipeReaderThread(QThread):
                 if type(msg) is bool:
                     logger.info(f'PipeReaderThread received message: {msg}')
                     self.data_received.emit(msg)
+                elif type(msg) is dict:
+                    min_space_ratio = msg['min_space_ratio']
+                    min_text_length = msg['min_text_length']
                 else:
                     logger.warning(
                         f'PipeReaderThread received non-boolean message from pipe: {msg}'

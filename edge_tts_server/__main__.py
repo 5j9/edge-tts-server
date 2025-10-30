@@ -63,6 +63,9 @@ async def prefetch_audio_loop(
         logger.critical('Fatal Error')
 
 
+config = loads((this_dir / 'config.json').read_bytes())
+
+
 def load_engine():
     """
     piper-tts engine uses a lot more memory, but is usually more responsive.
@@ -70,7 +73,6 @@ def load_engine():
     ms-sapi uses Microsoft Speech API (SAPI). It has limited features,
         but is usually the most responsive one.
     """
-    config = loads((this_dir / 'config.json').read_bytes())
     engine: str = config['engine']
 
     match engine:
@@ -273,6 +275,7 @@ if __name__ == '__main__':
     # loop.create_task(set_voice_names())
 
     qt_conn, conn = Pipe(True)
+    conn.send(config)
     qt_process = Process(target=run_qt_app, args=(qt_conn,))
     qt_process.start()
     listen_to_qt_task = create_task(listen_to_qt())
