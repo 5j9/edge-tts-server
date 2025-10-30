@@ -3,6 +3,7 @@ __version__ = '0.1.dev0'
 import sys
 import webbrowser
 from asyncio import Event, QueueShutDown, new_event_loop, sleep, to_thread
+from collections.abc import Awaitable, Callable
 from json import loads
 from multiprocessing import Pipe, Process
 from pathlib import Path
@@ -17,13 +18,52 @@ from aiohttp.web import (
     run_app,
 )
 
-from edge_tts_server import InputQ, OutputQ, logger
+from edge_tts_server import AudioQ, InputQ, OutputQ, logger
+from edge_tts_server.engines import detect_lang
 from edge_tts_server.qt_server import run_qt_app
 
 this_dir = Path(__file__).parent
 
 
-def load_prefetch_function():
+async def prefetch_audio_loop(
+    in_q: InputQ,
+    out_q: OutputQ,
+):
+    """Prefetch audio for all texts in the queue."""
+    lang_prefetch: Callable[[str], Callable[[str, str, AudioQ], Awaitable]] = (
+        load_engine()
+    )
+    try:
+        while True:
+            text = await in_q.get()
+            lang = detect_lang(text)
+            short_text = text[:20] + '...'
+            audio_q = AudioQ()
+            await out_q.put((text, lang == 'fa', audio_q))
+            fetcher = lang_prefetch(lang)
+            try:
+                for _ in range(3):
+                    try:
+                        await fetcher(text, lang, audio_q)
+                    except Exception as e:
+                        logger.debug(f'Retrying {e!r}.')
+                        continue
+                    logger.info(f'Audio cached for: {short_text}')
+                    break
+            except QueueShutDown:
+                logger.debug(f'audio_q QueueShutDown for {short_text}')
+            except Exception as e:
+                logger.error(
+                    f'Error prefetching audio for {short_text}: {e!r}'
+                )
+            finally:
+                audio_q.shutdown()
+                await in_q.atask_done()
+    except Exception:
+        logger.critical('Fatal Error')
+
+
+def load_engine():
     """
     piper-tts engine uses a lot more memory, but is usually more responsive.
     edge-tts engine uses the Microsoft Edge tts servers.
@@ -31,14 +71,46 @@ def load_prefetch_function():
         but is usually the most responsive one.
     """
     config = loads((this_dir / 'config.json').read_bytes())
-    if config['engine'] == 'edge-tts':
-        from edge_tts_server.engines.edge import prefetch_audio
-    else:
-        from edge_tts_server.engines.piper import prefetch_audio
-    return prefetch_audio
+    engine: str = config['engine']
 
+    match engine:
+        case 'edge':
+            from edge_tts_server.engines.edge import prefetch_audio
 
-prefetch_audio = load_prefetch_function()
+            def lang_prefetch(lang: str):
+                return prefetch_audio
+
+        case 'sapi':
+            from edge_tts_server.engines.sapi import prefetch_audio
+
+            def lang_prefetch(lang: str):
+                return prefetch_audio
+
+        case 'en:sapi_else:edge':
+            from edge_tts_server.engines.edge import (
+                prefetch_audio as edge_prefetch,
+            )
+            from edge_tts_server.engines.sapi import (
+                prefetch_audio as sapi_prefetch,
+            )
+
+            def lang_prefetch(lang: str):
+                if lang == 'en':
+                    return sapi_prefetch
+                else:
+                    return edge_prefetch
+
+        case 'piper':
+            from edge_tts_server.engines.piper import prefetch_audio
+
+            def lang_prefetch(lang: str):
+                return prefetch_audio
+
+        case _:
+            raise ValueError('unknown engine')
+
+    return lang_prefetch
+
 
 routes = RouteTableDef()
 
@@ -204,7 +276,7 @@ if __name__ == '__main__':
     qt_process = Process(target=run_qt_app, args=(qt_conn,))
     qt_process.start()
     listen_to_qt_task = create_task(listen_to_qt())
-    prefetch_audio_task = create_task(prefetch_audio(in_q, out_q))
+    prefetch_audio_task = create_task(prefetch_audio_loop(in_q, out_q))
     open_tab_task = create_task(open_tab_if_no_conn())
 
     try:

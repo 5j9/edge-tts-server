@@ -1,13 +1,12 @@
 import wave
-from asyncio import Queue, QueueShutDown, sleep
+from asyncio import Queue, sleep
 from collections.abc import Iterable
 from io import BytesIO
 from pathlib import Path
 
 from piper import AudioChunk, PiperVoice, SynthesisConfig
 
-from edge_tts_server import AudioQ, InputQ, OutputQ, logger
-from edge_tts_server.engines import persian_match
+from edge_tts_server import AudioQ, logger
 
 THIS_DIR = Path(__file__).parent
 en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')
@@ -59,27 +58,11 @@ async def stream_audio_to_q(
     # size field in the header.
 
 
-async def prefetch_audio(in_q: InputQ, out_q: OutputQ):
-    """Prefetch audio for all texts in the queue."""
-    while True:
-        text = await in_q.get()
-        is_fa = persian_match(text) is not None
-        voice, syn_config = (
-            (fa_voice, fa_syn_config) if is_fa else (en_voice, en_syn_config)
-        )
-        short_text = repr(text[:20] + '...')
-        audio_q = AudioQ()
-        await out_q.put((text, is_fa, audio_q))
-
-        try:
-            await stream_audio_to_q(
-                voice.synthesize(text, syn_config), audio_q
-            )
-            logger.debug(f'Audio cached for {short_text}')
-        except QueueShutDown:
-            logger.debug(f'audio_q QueueShutDown for {short_text}')
-        except Exception as e:
-            logger.error(f'Error prefetching audio for {short_text}: {e!r}')
-        finally:
-            audio_q.shutdown()
-            await in_q.atask_done()
+async def prefetch_audio(text: str, lang: str, audio_q: AudioQ):
+    is_fa = lang == 'fa'
+    voice, syn_config = (
+        (fa_voice, fa_syn_config) if is_fa else (en_voice, en_syn_config)
+    )
+    short_text = repr(text[:20] + '...')
+    await stream_audio_to_q(voice.synthesize(text, syn_config), audio_q)
+    logger.debug(f'Audio cached for {short_text}')

@@ -1,4 +1,4 @@
 {
-    "comment": "The engine can be either 'edge-tts' or 'piper-tts'.",
-    "engine": "edge-tts"
+    "comment": "See load_prefetch_function in __main__ for defined engines.",
+    "engine": "en:sapi_else:edge"
 }
