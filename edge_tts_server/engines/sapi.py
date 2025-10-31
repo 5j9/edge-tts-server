@@ -1,3 +1,7 @@
+from asyncio import QueueShutDown
+from collections import deque
+from types import MethodType
+
 import win32com.client as wincl
 
 from edge_tts_server import AudioQ
@@ -16,6 +20,16 @@ SVSFPurgeBeforeSpeak = 2  # Purges all pending speak requests
 # The flag value (1 | 2 = 3) clears the queue and starts the new message immediately (asynchronously).
 ASYNC_PURGE = SVSFlagsAsync | SVSFPurgeBeforeSpeak
 
+dq = deque()
+dq_popleft = dq.popleft
+dq_append = dq.append
+
+
+async def audio_q_get_wrapper(self: AudioQ):
+    speak(dq_popleft(), SVSFPurgeBeforeSpeak)
+    raise QueueShutDown
+
 
 async def prefetch_audio(text: str, lang: str, audio_q: AudioQ):
-    speak(text, SVSFlagsAsync)
+    dq_append(text)
+    audio_q.get = MethodType(audio_q_get_wrapper, audio_q)
