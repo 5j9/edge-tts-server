@@ -4,10 +4,10 @@ from edge_tts_server import AudioQ
 from edge_tts_server.config import sapi_rate
 
 # Initialize the SAPI.SpVoice COM object
-speaker = wincl.Dispatch('SAPI.SpVoice')
-speaker.Rate = sapi_rate
-speaker.Volume = 100
-speak = speaker.Speak
+sp_voice = wincl.Dispatch('SAPI.SpVoice')
+sp_voice.Rate = sapi_rate
+sp_voice.Volume = 100
+speak = sp_voice.Speak
 
 # https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms720892(v=vs.85)
 SVSFDefault = 0  # synchronous and not to purge pending
