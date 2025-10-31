@@ -1,10 +1,9 @@
-from asyncio import QueueShutDown, to_thread
-from collections import deque
+from asyncio import create_task, to_thread
 from types import MethodType
 
 import win32com.client as wincl
 
-from edge_tts_server import AudioQ
+from edge_tts_server import AudioQ, OutputQ
 from edge_tts_server.config import sapi_rate
 
 # Initialize the SAPI.SpVoice COM object
@@ -20,16 +19,19 @@ SVSFPurgeBeforeSpeak = 2  # Purges all pending speak requests
 # The flag value (1 | 2 = 3) clears the queue and starts the new message immediately (asynchronously).
 ASYNC_PURGE = SVSFlagsAsync | SVSFPurgeBeforeSpeak
 
-dq = deque()
-dq_popleft = dq.popleft
-dq_append = dq.append
+
+async def out_q_get_wrapper(self: OutputQ):
+    global speak_task  # create_task requires saving a ref
+    item = await original_out_q_get()
+    speak_task = create_task(to_thread(speak, item[0], SVSFPurgeBeforeSpeak))
+    return item
 
 
-async def audio_q_get_wrapper(self: AudioQ):
-    await to_thread(speak, dq_popleft(), SVSFPurgeBeforeSpeak)
-    raise QueueShutDown
+def patch_out_q(out_q: OutputQ):
+    global original_out_q_get
+    original_out_q_get = out_q.get
+    out_q.get = MethodType(out_q_get_wrapper, out_q)
 
 
 async def prefetch_audio(text: str, lang: str, audio_q: AudioQ):
-    dq_append(text)
-    audio_q.get = MethodType(audio_q_get_wrapper, audio_q)
+    pass
