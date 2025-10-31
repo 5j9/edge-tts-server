@@ -6,6 +6,7 @@ from edge_tts_server.config import sapi_rate
 # Initialize the SAPI.SpVoice COM object
 speaker = wincl.Dispatch('SAPI.SpVoice')
 speaker.Rate = sapi_rate
+speaker.Volume = 100
 speak = speaker.Speak
 
 # https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms720892(v=vs.85)
