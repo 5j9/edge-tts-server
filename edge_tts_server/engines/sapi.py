@@ -1,4 +1,4 @@
-from asyncio import QueueShutDown
+from asyncio import QueueShutDown, to_thread
 from collections import deque
 from types import MethodType
 
@@ -26,7 +26,7 @@ dq_append = dq.append
 
 
 async def audio_q_get_wrapper(self: AudioQ):
-    speak(dq_popleft(), SVSFPurgeBeforeSpeak)
+    await to_thread(speak, dq_popleft(), SVSFPurgeBeforeSpeak)
     raise QueueShutDown
 
 
