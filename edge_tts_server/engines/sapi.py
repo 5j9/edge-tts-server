@@ -1,5 +1,3 @@
-# WIP
-
 import win32com.client as wincl
 
 from edge_tts_server import AudioQ
@@ -8,14 +6,15 @@ from edge_tts_server.config import sapi_rate
 # Initialize the SAPI.SpVoice COM object
 speaker = wincl.Dispatch('SAPI.SpVoice')
 speaker.Rate = sapi_rate
-# https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms720892(v=vs.85)
-SVSFDefault = 0
-SVSFlagsAsync = 1
-SVSFPurgeBeforeSpeak = 2
-# The flag value (1 | 2 = 3) clears the queue and starts the new message immediately (asynchronously).
-INTERRUPT_AND_SPEAK = SVSFlagsAsync | SVSFPurgeBeforeSpeak
 speak = speaker.Speak
+
+# https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ms720892(v=vs.85)
+SVSFDefault = 0  # synchronous and not to purge pending
+SVSFlagsAsync = 1  # return immediately after the speak request is queued
+SVSFPurgeBeforeSpeak = 2  # Purges all pending speak requests
+# The flag value (1 | 2 = 3) clears the queue and starts the new message immediately (asynchronously).
+ASYNC_PURGE = SVSFlagsAsync | SVSFPurgeBeforeSpeak
 
 
 async def prefetch_audio(text: str, lang: str, audio_q: AudioQ):
-    speak(text, SVSFDefault)
+    speak(text, SVSFlagsAsync)
