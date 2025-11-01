@@ -79,26 +79,18 @@ def load_engine():
                 return prefetch_audio
 
         case 'sapi':
-            from edge_tts_server.engines.sapi import (
-                patch_out_q,
-                prefetch_audio,
-            )
+            from edge_tts_server.engines.sapi import prefetch_audio
 
             def lang_prefetch(lang: str):
                 return prefetch_audio
-
-            patch_out_q(out_q)
 
         case 'en:sapi_else:edge':
             from edge_tts_server.engines.edge import (
                 prefetch_audio as edge_prefetch,
             )
             from edge_tts_server.engines.sapi import (
-                patch_out_q,
                 prefetch_audio as sapi_prefetch,
             )
-
-            patch_out_q(out_q)
 
             def lang_prefetch(lang: str):
                 if lang == 'en':
