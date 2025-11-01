@@ -20,13 +20,13 @@ SVSFPurgeBeforeSpeak = 2  # Purges all pending speak requests
 ASYNC_PURGE = SVSFlagsAsync | SVSFPurgeBeforeSpeak
 
 
-def audio_q_get_decorator(text: str):
-    async def wrapper(self: AudioQ):
+def audio_q_get_substitute(text: str):
+    async def substitute(self: AudioQ):
         await to_thread(speak, text, SVSFPurgeBeforeSpeak)
         raise QueueShutDown
 
-    return wrapper
+    return substitute
 
 
 async def prefetch_audio(text: str, lang: str, audio_q: AudioQ):
-    audio_q.get = MethodType(audio_q_get_decorator(text), audio_q)
+    audio_q.get = MethodType(audio_q_get_substitute(text), audio_q)
