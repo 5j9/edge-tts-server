@@ -1,6 +1,7 @@
 import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
+from time import time
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QClipboard
@@ -44,12 +45,36 @@ def skip(text: str):
 previous_hash: int | None = None
 
 
+def debounce_duplicate(text: str):
+    global previous_hash
+    new_hash = hash(text)
+    if new_hash == previous_hash:
+        logger.debug('Debouncing duplicate text.')
+        previous_hash = None
+        return True
+    previous_hash = new_hash
+
+
+prev_time = 0
+
+
+def debounce_too_fast():
+    global prev_time
+    new_time = time()
+    if new_time < prev_time + 1.0:
+        logger.debug('Debouncing request in less than 1s.')
+        return True
+    prev_time = new_time
+
+
 def on_clipboard_changed():
     """
     Callback function triggered when clipboard content changes.
     Processes the text if monitoring is active and sends it via the pipe.
     """
-    global previous_hash
+    if debounce_too_fast():
+        return
+
     mime_data = clipboard.mimeData()
     assert mime_data is not None
     # Only process if the clipboard contains text
@@ -57,24 +82,17 @@ def on_clipboard_changed():
         return
 
     text = rm_urls(mime_data.text()).strip().replace('#', '').replace('*', '')
-    if skip(text):
+
+    if debounce_duplicate(text):
         return
 
-    # Debounce mechanism to prevent rapid, duplicate processing
-    new_hash = hash(text)
-    if new_hash == previous_hash:
-        logger.info('Debouncing duplicate text.')
-        previous_hash = None
+    if skip(text):
         return
-    else:
-        previous_hash = new_hash
 
     logger.info(f'Received text: {text[:50]}...')  # Log a snippet for brevity
     # Send the processed text (URLs removed) through the pipe
     conn.send(text)
 
-
-partial_on_clipboard_changed = partial(on_clipboard_changed)
 
 # --- Functions for controlling monitoring state via tray icon and pipe ---
 
@@ -96,7 +114,7 @@ def _toggle_tray_ui(
         )
         tray_icon.setToolTip('Clipboard Monitor (Paused)')
         try:
-            clipboard.dataChanged.disconnect(partial_on_clipboard_changed)
+            clipboard.dataChanged.disconnect(on_clipboard_changed)
         except TypeError:
             # dataChanged is not connected yet the first time app starts
             pass
@@ -107,7 +125,7 @@ def _toggle_tray_ui(
             style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
         )
         tray_icon.setToolTip('Clipboard Monitor (Active)')
-        clipboard.dataChanged.connect(partial_on_clipboard_changed)
+        clipboard.dataChanged.connect(on_clipboard_changed)
 
 
 def handle_tray_click(
