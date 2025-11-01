@@ -1,7 +1,7 @@
 import re
 from functools import partial
 from multiprocessing.connection import PipeConnection
-from time import time
+from time import time_ns
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QAction, QClipboard
@@ -55,16 +55,16 @@ def debounce_duplicate(text: str):
     previous_hash = new_hash
 
 
-prev_time = 0
+prev_ms = 0
 
 
 def debounce_too_fast():
-    global prev_time
-    new_time = time()
-    if new_time < prev_time + 1.0:
-        logger.debug('Debouncing request in less than 1s.')
+    global prev_ms
+    ms = time_ns() / 1e6
+    if ms < prev_ms + 100.0:
+        logger.debug('Debouncing request in less than 100ms.')
         return True
-    prev_time = new_time
+    prev_ms = ms
 
 
 def on_clipboard_changed():
