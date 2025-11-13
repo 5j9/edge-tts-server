@@ -235,7 +235,9 @@ async def _(_):
 
 audio_headers = {
     'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'audio/x-wav',
+    'Content-Type': 'audio/wav',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
 }
 
 
