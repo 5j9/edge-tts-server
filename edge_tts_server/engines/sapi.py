@@ -4,11 +4,42 @@ from asyncio import to_thread
 import win32com.client as wincl
 
 from edge_tts_server import AudioQ, logger
-from edge_tts_server.config import sp_voice_rate
+from edge_tts_server.config import sapi_voice_name, sapi_voice_rate
 
+
+# --- Voice Selection and Initialization Helper ---
+def _set_sapi_voice(voice_name: str, voice_obj):
+    """Finds and sets a specific SAPI voice by name, logging the result."""
+    current_voice_desc = voice_obj.Voice.GetDescription()
+    try:
+        voices = voice_obj.GetVoices()
+        selected_voice = None
+        for voice in voices:
+            if voice_name in voice.GetDescription():
+                selected_voice = voice
+                break
+
+        if selected_voice:
+            voice_obj.Voice = selected_voice
+            logger.info(
+                f'SAPI voice set to: {selected_voice.GetDescription()}'
+            )
+            return
+
+    except Exception as e:
+        logger.warning(f'Could not set SAPI voice to {voice_name}: {e!r}')
+
+    logger.info(f'SAPI using default or existing voice: {current_voice_desc}')
+
+
+# --- Global SAPI Initialization ---
 sp_voice = wincl.Dispatch('SAPI.SpVoice')
-sp_voice.Rate = sp_voice_rate
+sp_voice.Rate = sapi_voice_rate
 sp_voice.Volume = 100
+
+# Try switching to Zira or another voice for a better tone profile
+_set_sapi_voice(sapi_voice_name, sp_voice)
+
 speak = sp_voice.Speak
 
 # --- SAPI Constants ---
