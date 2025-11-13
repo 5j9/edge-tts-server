@@ -114,9 +114,6 @@ def load_engine():
 routes = RouteTableDef()
 
 
-all_origins = {'Access-Control-Allow-Origin': '*'}
-
-
 in_q = InputQ(
     maxsize=50, action='input-queue-size', current_ws_container=globals()
 )
@@ -212,9 +209,6 @@ async def _(request):
         await next_request.wait()
 
 
-audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
-
-
 @routes.get('/reader.html')
 async def _(_):
     return Response(
@@ -237,6 +231,12 @@ async def _(_):
         text=(this_dir / 'reader.css').read_bytes().decode(),
         content_type='text/css',
     )
+
+
+audio_headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'audio/x-wav',
+}
 
 
 @routes.get('/audio')
