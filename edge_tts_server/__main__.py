@@ -56,6 +56,7 @@ async def prefetch_audio_loop(
                     f'Error prefetching audio for {short_text}: {e!r}'
                 )
             finally:
+                logger.debug('calling audio_q.shutdown()')
                 audio_q.shutdown()
                 await in_q.atask_done()
     except Exception:
@@ -169,6 +170,7 @@ next_request = Event()
 
 @routes.get('/next')
 async def _(request: Request) -> Response:
+    logger.debug('recieved /next request')
     current_audio_q.shutdown(immediate=True)
     next_request.set()
     return Response()
@@ -208,7 +210,6 @@ async def _(request):
             await out_q.atask_done()
         logger.debug('awaiting next_request')
         await next_request.wait()
-        logger.debug('next_request set')
 
 
 audio_headers = all_origins | {'Content-Type': 'audio/mpeg'}
