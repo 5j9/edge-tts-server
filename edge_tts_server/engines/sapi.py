@@ -8,28 +8,41 @@ from edge_tts_server.config import sapi_voice_name, sapi_voice_rate
 
 
 # --- Voice Selection and Initialization Helper ---
-def _set_sapi_voice(voice_name: str, voice_obj):
-    """Finds and sets a specific SAPI voice by name, logging the result."""
-    current_voice_desc = voice_obj.Voice.GetDescription()
+def _initialize_sapi_voice_config(voice_name: str, voice_obj):
+    """
+    Prints a list of all available SAPI voices and attempts to set
+    the specified voice by name.
+    """
+    selected_voice = None
+
     try:
         voices = voice_obj.GetVoices()
-        selected_voice = None
-        for voice in voices:
-            if voice_name in voice.GetDescription():
-                selected_voice = voice
-                break
+        logger.info('-' * 40)
+        logger.info('Available SAPI Voices (for reference):')
+        for i, voice in enumerate(voices):
+            desc = voice.GetDescription()
+            logger.info(f'[{i}] {desc}')
 
+            # Check if this is the voice we want to select
+            if voice_name in desc and selected_voice is None:
+                selected_voice = voice
+        logger.info('-' * 40)
+
+        # 2. Attempt to set the selected voice
         if selected_voice:
             voice_obj.Voice = selected_voice
             logger.info(
-                f'SAPI voice set to: {selected_voice.GetDescription()}'
+                f'SAPI voice set successfully to: {selected_voice.GetDescription()}'
             )
             return
 
     except Exception as e:
-        logger.warning(f'Could not set SAPI voice to {voice_name}: {e!r}')
+        logger.error(f'SAPI Voice initialization error: {e!r}')
 
-    logger.info(f'SAPI using default or existing voice: {current_voice_desc}')
+    # Fallback log if no voice was set or an error occurred
+    logger.info(
+        f'SAPI using default or existing voice: {voice_obj.Voice.GetDescription()}'
+    )
 
 
 # --- Global SAPI Initialization ---
@@ -37,8 +50,8 @@ sp_voice = wincl.Dispatch('SAPI.SpVoice')
 sp_voice.Rate = sapi_voice_rate
 sp_voice.Volume = 100
 
-# Try switching to Zira or another voice for a better tone profile
-_set_sapi_voice(sapi_voice_name, sp_voice)
+# Initialize voice configuration: prints list and attempts to set sapi_voice_name
+_initialize_sapi_voice_config(sapi_voice_name, sp_voice)
 
 speak = sp_voice.Speak
 
