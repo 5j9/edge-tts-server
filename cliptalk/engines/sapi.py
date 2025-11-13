@@ -3,8 +3,8 @@ from asyncio import to_thread
 
 import win32com.client as wincl
 
-from edge_tts_server import AudioQ, logger
-from edge_tts_server.config import SAPI_VOICE_NAME, SAPI_VOICE_RATE
+from cliptalk import AudioQ, logger
+from cliptalk.config import SAPI_VOICE_NAME, SAPI_VOICE_RATE
 
 
 # --- Voice Selection and Initialization Helper ---

@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon,
 )
 
-from edge_tts_server import logger
+from cliptalk import logger
 
 qt_app = QApplication([])
 # Ensure the application continues to run even if there are no visible windows,

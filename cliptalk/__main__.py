@@ -17,9 +17,9 @@ from aiohttp.web import (
     run_app,
 )
 
-from edge_tts_server import AudioQ, InputQ, OutputQ, config, logger
-from edge_tts_server.engines import detect_lang
-from edge_tts_server.qt_server import run_qt_app
+from cliptalk import AudioQ, InputQ, OutputQ, config, logger
+from cliptalk.engines import detect_lang
+from cliptalk.qt_server import run_qt_app
 
 this_dir = Path(__file__).parent
 
@@ -74,22 +74,22 @@ def load_engine():
 
     match engine:
         case 'edge':
-            from edge_tts_server.engines.edge import prefetch_audio
+            from cliptalk.engines.edge import prefetch_audio
 
             def lang_prefetch(lang: str):
                 return prefetch_audio
 
         case 'sapi':
-            from edge_tts_server.engines.sapi import prefetch_audio
+            from cliptalk.engines.sapi import prefetch_audio
 
             def lang_prefetch(lang: str):
                 return prefetch_audio
 
         case 'en:sapi_else:edge':
-            from edge_tts_server.engines.edge import (
+            from cliptalk.engines.edge import (
                 prefetch_audio as edge_prefetch,
             )
-            from edge_tts_server.engines.sapi import (
+            from cliptalk.engines.sapi import (
                 prefetch_audio as sapi_prefetch,
             )
 
@@ -100,7 +100,7 @@ def load_engine():
                     return edge_prefetch
 
         case 'piper':
-            from edge_tts_server.engines.piper import prefetch_audio
+            from cliptalk.engines.piper import prefetch_audio
 
             def lang_prefetch(lang: str):
                 return prefetch_audio
@@ -209,26 +209,26 @@ async def _(request):
         await next_request.wait()
 
 
-@routes.get('/reader.html')
+@routes.get('/cliptalk.html')
 async def _(_):
     return Response(
-        text=(this_dir / 'reader.html').read_bytes().decode(),
+        text=(this_dir / 'cliptalk.html').read_bytes().decode(),
         content_type='text/html',
     )
 
 
-@routes.get('/reader.js')
+@routes.get('/cliptalk.js')
 async def _(_):
     return Response(
-        text=(this_dir / 'reader.js').read_bytes().decode(),
+        text=(this_dir / 'cliptalk.js').read_bytes().decode(),
         content_type='application/javascript',
     )
 
 
-@routes.get('/reader.css')
+@routes.get('/cliptalk.css')
 async def _(_):
     return Response(
-        text=(this_dir / 'reader.css').read_bytes().decode(),
+        text=(this_dir / 'cliptalk.css').read_bytes().decode(),
         content_type='text/css',
     )
 
@@ -262,7 +262,7 @@ async def _(request: Request) -> StreamResponse:
 async def open_tab_if_no_conn():
     await sleep(5.0)
     if current_ws is None:
-        webbrowser.open('http://127.0.0.1:3775/reader.html')
+        webbrowser.open('http://127.0.0.1:3775/cliptalk.html')
 
 
 if __name__ == '__main__':

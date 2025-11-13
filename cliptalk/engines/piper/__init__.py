@@ -6,7 +6,7 @@ from pathlib import Path
 
 from piper import AudioChunk, PiperVoice, SynthesisConfig
 
-from edge_tts_server import AudioQ, logger
+from cliptalk import AudioQ, logger
 
 THIS_DIR = Path(__file__).parent
 en_voice = PiperVoice.load(THIS_DIR / 'voices/en_US-hfc_male-medium.onnx')

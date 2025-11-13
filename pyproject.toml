@@ -53,7 +53,7 @@ addopts = '--quiet --tb=short'
 
 [tool.uv.build-backend]
 module-root = ""
-module-name = "edge_tts_server"
+module-name = "cliptalk"
 
 [tool.pyright]
 typeCheckingMode = 'standard'

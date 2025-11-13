@@ -1,6 +1,6 @@
 from edge_tts import Communicate, VoicesManager
 
-from edge_tts_server import AudioQ
+from cliptalk import AudioQ
 
 # See set_voice_names for how to retrieve and search available voices
 fa_voice: str = (
