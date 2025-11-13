@@ -70,7 +70,7 @@ def load_engine():
     sapi uses Microsoft Speech API (SAPI). It has limited features,
         but is usually the most responsive one.
     """
-    engine: str = config.engine
+    engine: str = config.ENGINE
 
     match engine:
         case 'edge':
@@ -274,7 +274,7 @@ if __name__ == '__main__':
     # loop.create_task(set_voice_names())
 
     qt_conn, conn = Pipe(True)
-    conn.send((config.min_space_ratio, config.min_text_length))
+    conn.send((config.MIN_SPACE_RATIO, config.MIN_TEXT_LENGTH))
     qt_process = Process(target=run_qt_app, args=(qt_conn,))
     qt_process.start()
     listen_to_qt_task = create_task(listen_to_qt())

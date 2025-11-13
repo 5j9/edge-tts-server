@@ -4,7 +4,7 @@ from asyncio import to_thread
 import win32com.client as wincl
 
 from edge_tts_server import AudioQ, logger
-from edge_tts_server.config import sapi_voice_name, sapi_voice_rate
+from edge_tts_server.config import SAPI_VOICE_NAME, SAPI_VOICE_RATE
 
 
 # --- Voice Selection and Initialization Helper ---
@@ -47,11 +47,11 @@ def _initialize_sapi_voice_config(voice_name: str, voice_obj):
 
 # --- Global SAPI Initialization ---
 sp_voice = wincl.Dispatch('SAPI.SpVoice')
-sp_voice.Rate = sapi_voice_rate
+sp_voice.Rate = SAPI_VOICE_RATE
 sp_voice.Volume = 100
 
 # Initialize voice configuration: prints list and attempts to set sapi_voice_name
-_initialize_sapi_voice_config(sapi_voice_name, sp_voice)
+_initialize_sapi_voice_config(SAPI_VOICE_NAME, sp_voice)
 
 speak = sp_voice.Speak
 
@@ -87,8 +87,8 @@ def _create_wav_header(data_size: int) -> bytes:
         SAMPLE_RATE,  # Sample Rate
         BYTE_RATE,  # Byte Rate
         BLOCK_ALIGN,  # Block Align
-        BITS_PER_SAMPLE,
-    )  # Bits Per Sample
+        BITS_PER_SAMPLE,  # Bits Per Sample
+    )
 
     # Data Chunk (data)
     header += struct.pack('<4sI', b'data', data_size)  # Data Chunk ID and Size
