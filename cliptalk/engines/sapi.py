@@ -124,19 +124,9 @@ def _convert_to_wave_blocking(text: str) -> bytes:
         # 5. Clean up the output stream setting
         sp_voice.AudioOutputStream = None
 
-        if raw_pcm_bytes:
-            # 6. Manually generate the WAV header and prepend it
-            wav_header = _create_wav_header(len(raw_pcm_bytes))
-            final_wave_bytes = wav_header + raw_pcm_bytes
-
-            # --- Diagnostic Check ---
-            logger.debug(
-                f'Successfully generated WAV stream. Start: {final_wave_bytes[:12].hex()}'
-            )
-        else:
-            logger.error(
-                'SAPI stream failed: Raw PCM data was empty, cannot generate WAV file.'
-            )
+        # 6. Manually generate the WAV header and prepend it
+        wav_header = _create_wav_header(len(raw_pcm_bytes))
+        final_wave_bytes = wav_header + raw_pcm_bytes
 
     except Exception as e:
         # Using the global sp_voice in a non-thread-safe way might lead to COM errors here
