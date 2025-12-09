@@ -29,9 +29,7 @@ async def prefetch_audio_loop(
     out_q: OutputQ,
 ):
     """Prefetch audio for all texts in the queue."""
-    lang_prefetch: Callable[[str], Callable[[str, str, AudioQ], Awaitable]] = (
-        load_engine()
-    )
+    engines = load_engines()
     try:
         while True:
             text = await in_q.get()
@@ -39,7 +37,7 @@ async def prefetch_audio_loop(
             short_text = text[:20] + '...'
             audio_q = AudioQ()
             await out_q.put((text, lang == 'fa', audio_q))
-            fetcher = lang_prefetch(lang)
+            fetcher = engines.get(lang) or engines['default']
             try:
                 for _ in range(3):
                     try:
@@ -63,52 +61,35 @@ async def prefetch_audio_loop(
         logger.critical('Fatal Error')
 
 
-def load_engine():
+def load_engines() -> dict[str, Callable[[str, str, AudioQ], Awaitable]]:
     """
     piper engine uses a lot more memory, but is usually more responsive.
     edge engine uses the Microsoft Edge tts servers.
     sapi uses Microsoft Speech API (SAPI). It has limited features,
         but is usually the most responsive one.
     """
-    engine: str = config.ENGINE
+    engines: dict = config.ENGINES
 
-    match engine:
-        case 'edge':
-            from cliptalk.engines.edge import prefetch_audio
+    for lang, engine in engines.items():
+        match engine:
+            case 'edge':
+                from cliptalk.engines.edge import prefetch_audio
 
-            def lang_prefetch(lang: str):
-                return prefetch_audio
+                engines[lang] = prefetch_audio
 
-        case 'sapi':
-            from cliptalk.engines.sapi import prefetch_audio
+            case 'sapi':
+                from cliptalk.engines.sapi import prefetch_audio
 
-            def lang_prefetch(lang: str):
-                return prefetch_audio
+                engines[lang] = prefetch_audio
 
-        case 'en:sapi_else:edge':
-            from cliptalk.engines.edge import (
-                prefetch_audio as edge_prefetch,
-            )
-            from cliptalk.engines.sapi import (
-                prefetch_audio as sapi_prefetch,
-            )
+            case 'piper':
+                from cliptalk.engines.piper import prefetch_audio
 
-            def lang_prefetch(lang: str):
-                if lang == 'en':
-                    return sapi_prefetch
-                else:
-                    return edge_prefetch
+                engines[lang] = prefetch_audio
+            case _:
+                raise ValueError('unknown engine')
 
-        case 'piper':
-            from cliptalk.engines.piper import prefetch_audio
-
-            def lang_prefetch(lang: str):
-                return prefetch_audio
-
-        case _:
-            raise ValueError('unknown engine')
-
-    return lang_prefetch
+    return engines
 
 
 routes = RouteTableDef()
